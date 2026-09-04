@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+credentials/
+.venv/
+.venv-1/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+uploads/
+*.db
+*.sqlite3
+/extracted_zip/
+ps47_brain_ai_orchestration.zip
