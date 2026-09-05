@@ -1,0 +1,5 @@
+export interface PatientProfileCreate { full_name: string; date_of_birth?: string | null; gender?: string | null; phone?: string | null; preferred_language: string; hospital_identifier?: string | null; }
+export interface PatientProfileResponse { id: string; user_id: string; full_name: string; date_of_birth: string | null; gender: string | null; phone: string | null; preferred_language: string; hospital_identifier: string | null; }
+export type EncounterStatus = "registered" | "intake_in_progress" | "ready_for_review" | "completed";
+export interface EncounterCreate { opd_department?: string | null; scheduled_at?: string | null; }
+export interface EncounterResponse { id: string; patient_id: string; doctor_user_id: string | null; queue_status: EncounterStatus; opd_department: string | null; scheduled_at: string | null; }
