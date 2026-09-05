@@ -73,6 +73,8 @@ class IntakeTurnResponse(BaseModel):
     pathway_complete: bool
     entities_extracted: List[ExtractedEntitySummary]
     turn_number: int
+    raw_transcript: Optional[str] = None
+    detected_language: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

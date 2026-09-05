@@ -715,3 +715,114 @@ def test_invalid_session_id_returns_404(client: TestClient):
         "answering_field_name": "chief_complaint",
     }, headers=chain["headers"])
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# POST /intake/turn/voice tests (Phase 4C)
+# ---------------------------------------------------------------------------
+
+def test_voice_turn_requires_auth(client: TestClient):
+    """Calling /intake/turn/voice without a JWT must return 401."""
+    r = client.post("/intake/turn/voice", data={
+        "encounter_id": "any",
+        "session_id": "any",
+    }, files={"audio_file": ("test.wav", b"RIFF....WAVE" + b"\x00" * 32, "audio/wav")})
+    assert r.status_code == 401
+
+
+def test_voice_turn_rejects_doctor_jwt(client: TestClient):
+    """Doctor tokens cannot access patient /intake/turn/voice (403 Forbidden)."""
+    chain = _create_patient_chain(client, "vDocA")
+    session_id = _start_session(client, chain)
+
+    doc_creds = _register_and_login(client, "doc_voice@test.com", "password123", "doctor")
+    doc_headers = _auth_headers(doc_creds["token"])
+    r = client.post(
+        "/intake/turn/voice",
+        data={
+            "encounter_id": chain["encounter_id"],
+            "session_id": session_id,
+            "answering_field_name": "chief_complaint",
+        },
+        files={"audio_file": ("test.wav", b"RIFF....WAVE" + b"\x00" * 32, "audio/wav")},
+        headers=doc_headers,
+    )
+    assert r.status_code == 403
+
+
+def test_voice_turn_rejects_empty_audio(client: TestClient):
+    """Empty audio file must be rejected with 422."""
+    chain = _create_patient_chain(client, "vEmpty")
+    session_id = _start_session(client, chain)
+
+    r = client.post(
+        "/intake/turn/voice",
+        data={
+            "encounter_id": chain["encounter_id"],
+            "session_id": session_id,
+            "answering_field_name": "chief_complaint",
+        },
+        files={"audio_file": ("empty.wav", b"", "audio/wav")},
+        headers=chain["headers"],
+    )
+    assert r.status_code == 422
+
+
+def test_voice_turn_rejects_oversized_audio(client: TestClient):
+    """Audio file larger than 10MB must be rejected with 422."""
+    chain = _create_patient_chain(client, "vBig")
+    session_id = _start_session(client, chain)
+
+    oversized = b"A" * (10 * 1024 * 1024 + 1)
+    r = client.post(
+        "/intake/turn/voice",
+        data={
+            "encounter_id": chain["encounter_id"],
+            "session_id": session_id,
+            "answering_field_name": "chief_complaint",
+        },
+        files={"audio_file": ("huge.wav", oversized, "audio/wav")},
+        headers=chain["headers"],
+    )
+    assert r.status_code == 422
+
+
+def test_voice_turn_happy_path(client: TestClient):
+    """
+    Submits a real voice audio payload:
+    - Audio is transcribed (mocked in offline run)
+    - Entities extracted and persisted with UNREVIEWED status
+    - Raw transcript returned in response
+    - Next schema question returned
+    """
+    chain = _create_patient_chain(client, "vHappy")
+    session_id = _start_session(client, chain)
+
+    sample_audio = b"RIFF....WAVEfmt " + b"\x00" * 64
+    r = client.post(
+        "/intake/turn/voice",
+        data={
+            "encounter_id": chain["encounter_id"],
+            "session_id": session_id,
+            "answering_field_name": "chief_complaint",
+            "language": "en",
+        },
+        files={"audio_file": ("patient_turn1.wav", sample_audio, "audio/wav")},
+        headers=chain["headers"],
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["session_id"] == session_id
+    assert data["turn_number"] == 1
+    assert data["raw_transcript"] is not None
+    assert data["next_question"] is not None
+    assert data["next_question_field_name"] == "onset"
+    assert data["pathway_complete"] is False
+
+    # Check entities
+    assert len(data["entities_extracted"]) >= 1
+    entity = data["entities_extracted"][0]
+    assert entity["field_name"] == "chief_complaint"
+    assert "chest pain" in entity["value"].lower()
+    assert entity["source_type"] == "intake_session"
+

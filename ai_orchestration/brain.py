@@ -61,8 +61,14 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
     guesses it from question text.
     """
     voice_text = None
+    asr_confidence = None
+    detected_language = None
+
     if request.audio_bytes:
-        voice_text = transcribe(request.audio_bytes, request.language).text
+        asr_result = transcribe(request.audio_bytes, request.language)
+        voice_text = asr_result.text
+        asr_confidence = asr_result.raw_confidence
+        detected_language = asr_result.detected_language
 
     # Voice and touch are combined, not one silently overwriting the other —
     # e.g. patient says "haan, 3 din se" then confirms "Duration: 3 days".
@@ -78,6 +84,7 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
             turn_index=turn_index,
             patient_text=normalized_text,
             expected_fields=schema.required_fields,
+            asr_confidence=asr_confidence,
         )
 
     updated_history = request.history + [
@@ -86,6 +93,7 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
             patient_response_text=normalized_text,
             language=request.language,
             field_name=request.answering_field_name,
+            raw_transcript=voice_text,
         )
     ] if normalized_text else request.history
 
@@ -97,6 +105,8 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
         next_question_field_name=next_field.field_name if next_field else None,
         draft_entities=validate_draft_batch(draft_entities),
         pathway_complete=complete,
+        raw_transcript=voice_text,
+        detected_language=detected_language,
     )
 
 

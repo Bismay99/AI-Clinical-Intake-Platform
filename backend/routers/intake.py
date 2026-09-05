@@ -234,6 +234,103 @@ def intake_turn(
         pathway_complete=brain_response.pathway_complete,
         entities_extracted=_entity_summaries(new_db_entities),
         turn_number=turn_count,
+        raw_transcript=brain_response.raw_transcript,
+        detected_language=brain_response.detected_language,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /intake/turn/voice
+# ---------------------------------------------------------------------------
+@router.post("/turn/voice", response_model=IntakeTurnResponse)
+async def intake_turn_voice(
+    encounter_id: str = Form(...),
+    session_id: str = Form(...),
+    answering_field_name: Optional[str] = Form(None),
+    touch_answer: Optional[str] = Form(None),
+    language: Optional[str] = Form(None),
+    audio_file: UploadFile = File(...),
+    current_user: User = Depends(_require_patient),
+    db: Session = Depends(get_db),
+):
+    """
+    Processes one patient voice turn in the adaptive intake conversation.
+
+    Flow:
+      POST voice audio -> ASR -> raw_transcript -> normalization -> clinical extraction
+      -> question engine -> structured intake response
+
+    Ownership: JWT -> patient -> encounter -> session
+    Max audio size: 10MB
+    Rejects empty audio with 422 Unprocessable Content.
+    """
+    patient, encounter, session = resolve_patient_encounter_session(
+        encounter_id, session_id, current_user, db
+    )
+    require_encounter_not_completed(encounter)
+    require_session_in_progress(session)
+
+    # Validate audio upload
+    audio_bytes = await audio_file.read()
+    if not audio_bytes or len(audio_bytes.strip()) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Uploaded audio file is empty.",
+        )
+    if len(audio_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Uploaded audio file exceeds maximum allowed size of 10MB.",
+        )
+
+    # Reconstruct IntakeTurn history from answered_fields_json stored in session
+    answered_fields: List[str] = session.answered_fields_json or []
+    history = build_history_from_answered_fields(answered_fields, session.language)
+
+    # Build the brain request with real audio bytes
+    brain_request = BrainIntakeRequest(
+        encounter_id=encounter.id,
+        schema_id=session.schema_id,
+        language=language or session.language,
+        audio_bytes=audio_bytes,
+        touch_answer=touch_answer,
+        history=history,
+        answering_field_name=answering_field_name,
+    )
+
+    # ── Call brain.py (in-process) ────────────────────────────────────────
+    brain_response = handle_intake_turn(brain_request)
+
+    # ── Persist draft entities (strictly UNREVIEWED) ───────────────────────
+    new_db_entities: List[DBEntity] = []
+    for contract_entity in brain_response.draft_entities:
+        db_entity = contract_entity_to_db(
+            contract=contract_entity,
+            encounter_id=encounter.id,
+            document_id=None,
+        )
+        db.add(db_entity)
+        new_db_entities.append(db_entity)
+
+    # ── Update session state ──────────────────────────────────────────────
+    if answering_field_name and answering_field_name not in answered_fields:
+        answered_fields = answered_fields + [answering_field_name]
+
+    turn_count = int(session.turn_count or "0") + 1
+    session.answered_fields_json = list(answered_fields)
+    session.turn_count = str(turn_count)
+
+    db.flush()
+
+    return IntakeTurnResponse(
+        session_id=session.id,
+        next_question=brain_response.next_question,
+        next_question_field_name=brain_response.next_question_field_name,
+        pathway_complete=brain_response.pathway_complete,
+        entities_extracted=_entity_summaries(new_db_entities),
+        turn_number=turn_count,
+        raw_transcript=brain_response.raw_transcript,
+        detected_language=brain_response.detected_language,
     )
 
 

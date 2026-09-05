@@ -73,11 +73,15 @@ class IntakeTurn:
     the caller never has to reverse-engineer a field from question text, and
     question_engine.py never has to pattern-match prompt strings back to a
     field either.
+
+    raw_transcript preserves the exact, unnormalized ASR utterance for
+    clinical auditability and doctor verification.
     """
     question: str
     patient_response_text: str
     language: str
     field_name: Optional[str] = None
+    raw_transcript: Optional[str] = None
 
 
 @dataclass
@@ -100,6 +104,9 @@ class IntakeResponse:
     next_question_field_name: Optional[str] # schema field_name the next_question maps to
     draft_entities: List[ExtractedEntity]
     pathway_complete: bool
+    raw_transcript: Optional[str] = None    # unnormalized ASR transcript if voice turn
+    detected_language: Optional[str] = None # provider-detected or code-switch indicator
+
 
 
 @dataclass

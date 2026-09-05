@@ -114,8 +114,11 @@ def mock_vision_ocr_for_existing_tests(monkeypatch, request):
     """
     is_no_mock = "no_auto_ocr_mock" in request.keywords
     is_live_doc = "live_document_ai" in request.keywords
+    is_live_voice = "live_voice_pipeline" in request.keywords
     is_live_ocr = "live_ocr" in request.keywords or is_no_mock or is_live_doc
-    is_live_llm = "live_llm" in request.keywords or is_no_mock or is_live_doc
+    is_live_llm = "live_llm" in request.keywords or is_no_mock or is_live_doc or is_live_voice
+    is_live_asr = "live_asr" in request.keywords or is_no_mock or is_live_voice
+
 
     from ai_orchestration.services.ocr import OcrBlock
 
@@ -373,3 +376,59 @@ def mock_vision_ocr_for_existing_tests(monkeypatch, request):
             "ai_orchestration.extraction.extract_structured_fields",
             _mock_extract_structured_fields,
         )
+
+    # -- Apply ASR mock (unless live_asr) ------------------------------------
+    from ai_orchestration.services.asr import TranscriptionResult
+
+    def _mock_transcribe(audio_bytes, language_hint="auto", client=None, provider=None, model=None, mime_type=None, filename_hint=None):
+        if not audio_bytes:
+            return TranscriptionResult(text="", language=language_hint, raw_confidence=None)
+
+        content_str = str(audio_bytes).lower()
+        if "hindi" in content_str or b"hindi" in audio_bytes:
+            return TranscriptionResult(
+                text="मुझे तीन दिन से सीने में तेज दर्द है।",
+                language="hi",
+                detected_language="hi",
+                raw_confidence=None,
+                provider="gemini",
+                model="gemini-3.5-transcribe",
+            )
+        elif "hinglish" in content_str or b"hinglish" in audio_bytes:
+            return TranscriptionResult(
+                text="Mujhe two days se chest mein pain ho raha hai.",
+                language="mixed",
+                detected_language="mixed",
+                raw_confidence=None,
+                provider="gemini",
+                model="gemini-3.5-transcribe",
+            )
+        elif "silence" in content_str or b"silence" in audio_bytes:
+            return TranscriptionResult(
+                text="",
+                language=language_hint,
+                detected_language=None,
+                raw_confidence=None,
+                provider="gemini",
+                model="gemini-3.5-transcribe",
+            )
+        else:
+            return TranscriptionResult(
+                text="I have severe chest pain for three days.",
+                language=language_hint if language_hint != "auto" else "en",
+                detected_language="en",
+                raw_confidence=None,
+                provider="gemini",
+                model="gemini-3.5-transcribe",
+            )
+
+    if not is_live_asr:
+        monkeypatch.setattr(
+            "ai_orchestration.services.asr.transcribe",
+            _mock_transcribe,
+        )
+        monkeypatch.setattr(
+            "ai_orchestration.brain.transcribe",
+            _mock_transcribe,
+        )
+

@@ -121,18 +121,23 @@ def extract_from_document(document_id: str, document_type: str, file_bytes: byte
 
 
 def extract_from_intake_turn(intake_session_id: str, turn_index: int, patient_text: str,
-                              expected_fields: List[str]) -> List[ExtractedEntity]:
+                              expected_fields: List[str],
+                              asr_confidence: Optional[float] = None) -> List[ExtractedEntity]:
     """
     Same assembly pattern as extract_from_document, but sourced from a
     patient's spoken/typed intake turn instead of a scanned document.
+
+    If asr_confidence is available, combine ASR confidence with model confidence.
+    If asr_confidence is None, use model confidence alone (never fabricate ASR confidence).
     """
     guesses = extract_structured_fields(patient_text, expected_fields)
 
     entities: List[ExtractedEntity] = []
     for guess in guesses:
-        # Intake turns don't have a separate OCR confidence signal; use the
-        # model confidence alone, combined conservatively with itself.
-        confidence = combine_confidence(guess.model_confidence, guess.model_confidence)
+        if asr_confidence is not None:
+            confidence = combine_confidence(asr_confidence, guess.model_confidence)
+        else:
+            confidence = combine_confidence(guess.model_confidence, guess.model_confidence)
         source = attach_intake_provenance(guess, intake_session_id, turn_index)
         entities.append(ExtractedEntity(
             field_name=guess.field_name,
