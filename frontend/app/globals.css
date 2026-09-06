@@ -247,3 +247,70 @@ code, kbd, pre, .font-mono {
     transform: none !important;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CareFlow AI — Accessibility Preference Overrides
+   Applied via data-* attributes set on <html> by the Accessibility page.
+   Persisted in localStorage under key: careflow_accessibility_prefs
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Larger Text ─────────────────────────────────────────────────────────── */
+:root[data-text-size="large"] {
+  font-size: 18px;
+}
+:root[data-text-size="large"] .text-xs   { font-size: 0.8125rem; }
+:root[data-text-size="large"] .text-sm   { font-size: 0.9375rem; }
+:root[data-text-size="large"] .text-base { font-size: 1.0625rem; }
+:root[data-text-size="large"] .text-lg   { font-size: 1.1875rem; }
+:root[data-text-size="large"] .text-xl   { font-size: 1.3125rem; }
+:root[data-text-size="large"] .text-2xl  { font-size: 1.625rem; }
+
+/* ── High Contrast ───────────────────────────────────────────────────────── */
+:root[data-contrast="high"] {
+  --bg-canvas:    #000000;
+  --bg-surface:   #0a0a0a;
+  --bg-surface-2: #111111;
+  --ink-900: #ffffff;
+  --ink-800: #f0f0f0;
+  --ink-700: #dddddd;
+  --ink-500: #bbbbbb;
+  --ink-400: #999999;
+  --ink-200: #444444;
+  --ink-100: #222222;
+  --clinical:       #4dd4fc;
+  --clinical-light: #002a36;
+  --clinical-mid:   #006080;
+}
+
+/* ── Reduced Motion ──────────────────────────────────────────────────────── */
+:root[data-reduced-motion="true"] *,
+:root[data-reduced-motion="true"] *::before,
+:root[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Larger Touch Targets ────────────────────────────────────────────────── */
+:root[data-touch="large"] button,
+:root[data-touch="large"] a,
+:root[data-touch="large"] [role="button"],
+:root[data-touch="large"] input[type="checkbox"],
+:root[data-touch="large"] input[type="radio"],
+:root[data-touch="large"] select {
+  min-height: 48px;
+  min-width: 48px;
+}
+:root[data-touch="large"] input:not([type="checkbox"]):not([type="radio"]),
+:root[data-touch="large"] textarea {
+  min-height: 48px;
+}

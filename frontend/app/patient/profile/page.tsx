@@ -170,7 +170,7 @@ export default function PatientProfile() {
   if (!profile) return null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Page Title & Actions */}
       <div className="pb-3 border-b border-[var(--ink-200)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
