@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,9 +9,16 @@ import {
   assignEncounter,
 } from "@/services/doctor.service";
 import { StatusBadge } from "@/components/doctor/StatusBadge";
+import { PriorityBadge } from "@/components/doctor/PriorityBadge";
+import { IntakeCompletenessBadge } from "@/components/doctor/IntakeCompletenessBadge";
+import { PatientQuickView } from "@/components/doctor/PatientQuickView";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { QueueListSkeleton } from "@/components/doctor/DoctorSkeletons";
+import {
+  calculateAttentionPriority,
+  formatWaitingTime,
+} from "@/lib/doctorUtils";
 import {
   Search,
   UserCheck,
@@ -22,10 +29,53 @@ import {
   CheckCircle2,
   Filter,
   User,
-  Hash,
   Sparkles,
+  Eye,
+  ArrowUpDown,
 } from "lucide-react";
 import type { PatientSearchResult, QueueItem, AvailableEncounterItem } from "@/types/doctor";
+
+type SortOption = "priority" | "waiting" | "newest" | "updated";
+
+function sortPatientItems<T extends {
+  created_at?: string;
+  updated_at?: string;
+  unreviewed_count?: number;
+  total_entities?: number;
+  encounter_status?: string;
+  queue_status?: string;
+}>(items: T[], sortBy: SortOption): T[] {
+  return [...items].sort((a, b) => {
+    if (sortBy === "priority") {
+      const priorityRank: Record<string, number> = {
+        CRITICAL: 4,
+        HIGH: 3,
+        NORMAL: 2,
+        LOW: 1,
+      };
+      const pA = calculateAttentionPriority(a).level;
+      const pB = calculateAttentionPriority(b).level;
+      const diff = (priorityRank[pB] || 0) - (priorityRank[pA] || 0);
+      if (diff !== 0) return diff;
+    }
+    if (sortBy === "waiting") {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return timeA - timeB;
+    }
+    if (sortBy === "newest") {
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return timeB - timeA;
+    }
+    if (sortBy === "updated") {
+      const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return timeB - timeA;
+    }
+    return 0;
+  });
+}
 
 function PatientsContent() {
   const router = useRouter();
@@ -35,10 +85,24 @@ function PatientsContent() {
   const initialTab = (searchParams.get("tab") as "mine" | "available" | "search") || "mine";
   const [activeTab, setActiveTab] = useState<"mine" | "available" | "search">(initialTab);
 
-  // Filters
+  // Filters & Sorting
   const [filterText, setFilterText] = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [sortBy, setSortBy] = useState<SortOption>("priority");
+
+  // State for Quick View
+  const [quickViewItem, setQuickViewItem] = useState<{
+    encounter_id: string;
+    patient_id?: string | null;
+    patient_name: string;
+    encounter_status?: string;
+    opd_department?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    unreviewed_count?: number;
+    total_entities?: number;
+  } | null>(null);
 
   // Search by UID state
   const [searchUid, setSearchUid] = useState("");
@@ -78,7 +142,7 @@ function PatientsContent() {
     return Array.from(depts);
   }, [queue, available]);
 
-  // Filtered assigned items
+  // Filtered and sorted assigned items
   const filteredAssigned = useMemo(() => {
     let items = queue?.items || [];
     if (filterText.trim()) {
@@ -96,10 +160,10 @@ function PatientsContent() {
     if (filterStatus !== "all") {
       items = items.filter((i) => i.encounter_status === filterStatus);
     }
-    return items;
-  }, [queue, filterText, filterDept, filterStatus]);
+    return sortPatientItems(items, sortBy);
+  }, [queue, filterText, filterDept, filterStatus, sortBy]);
 
-  // Filtered available pool items
+  // Filtered and sorted available pool items
   const filteredAvailable = useMemo(() => {
     let items = available || [];
     if (filterText.trim()) {
@@ -113,8 +177,8 @@ function PatientsContent() {
     if (filterDept !== "all") {
       items = items.filter((i) => i.opd_department === filterDept);
     }
-    return items;
-  }, [available, filterText, filterDept]);
+    return sortPatientItems(items, sortBy);
+  }, [available, filterText, filterDept, sortBy]);
 
   // Search by UID handler
   async function handleSearch(e?: React.FormEvent) {
@@ -159,7 +223,7 @@ function PatientsContent() {
       <div className="border-b border-[var(--ink-200)] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-[var(--ink-900)] tracking-tight">
-            Clinical Queue &amp; Discovery
+            Clinical Queue &amp; Patient Discovery
           </h1>
           <p className="text-xs text-[var(--ink-500)] mt-0.5">
             Central clinical registry: search authorized patients, manage active assignments, or claim encounters from the hospital pool.
@@ -222,7 +286,7 @@ function PatientsContent() {
       {/* ── TAB 1: Assigned Patients (Active Clinical Registry) ── */}
       {activeTab === "mine" && (
         <div className="space-y-4">
-          {/* Filter Bar */}
+          {/* Filter Bar with Sort Dropdown */}
           <div className="p-3 bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs">
             <div className="flex-1 relative">
               <Search className="w-4 h-4 text-[var(--ink-400)] absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
@@ -243,7 +307,7 @@ function PatientsContent() {
               <select
                 value={filterDept}
                 onChange={(e) => setFilterDept(e.target.value)}
-                className="text-xs border border-[var(--ink-200)] rounded-md px-2 py-1 bg-[var(--bg-surface)] text-[var(--ink-800)] focus:outline-none"
+                className="text-xs border border-[var(--ink-200)] rounded-md px-2 py-1 bg-[var(--bg-surface)] text-[var(--ink-800)] focus:outline-none cursor-pointer"
               >
                 <option value="all">All Departments</option>
                 {allDepartments.map((dept) => (
@@ -256,13 +320,27 @@ function PatientsContent() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="text-xs border border-[var(--ink-200)] rounded-md px-2 py-1 bg-[var(--bg-surface)] text-[var(--ink-800)] focus:outline-none"
+                className="text-xs border border-[var(--ink-200)] rounded-md px-2 py-1 bg-[var(--bg-surface)] text-[var(--ink-800)] focus:outline-none cursor-pointer"
               >
                 <option value="all">All Statuses</option>
                 <option value="ready_for_review">Ready for Review</option>
                 <option value="submitted">Submitted</option>
                 <option value="completed">Completed</option>
               </select>
+
+              <div className="flex items-center gap-1 pl-2 border-l border-[var(--ink-200)]">
+                <ArrowUpDown className="w-3 h-3 text-[var(--ink-400)]" aria-hidden="true" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="text-xs border border-[var(--ink-200)] rounded-md px-2 py-1 bg-[var(--bg-surface)] text-[var(--ink-800)] focus:outline-none cursor-pointer font-medium"
+                >
+                  <option value="priority">Priority First</option>
+                  <option value="waiting">Waiting Longest</option>
+                  <option value="newest">Newest First</option>
+                  <option value="updated">Recently Updated</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -299,6 +377,8 @@ function PatientsContent() {
                   const total = item.total_entities ?? 0;
                   const unreviewed = item.unreviewed_count ?? 0;
                   const verified = Math.max(0, total - unreviewed);
+                  const operationalPriority = calculateAttentionPriority(item);
+                  const waitingStr = formatWaitingTime(item.created_at);
 
                   return (
                     <div
@@ -306,7 +386,7 @@ function PatientsContent() {
                       className="px-5 py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-[var(--bg-surface-2)] transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2.5 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-bold text-[var(--ink-900)]">
                             {item.patient_name}
                           </span>
@@ -314,6 +394,10 @@ function PatientsContent() {
                             UID: {item.patient_id.slice(0, 8)}…
                           </span>
                           <StatusBadge status={item.encounter_status} />
+                          <PriorityBadge
+                            level={operationalPriority.level}
+                            reason={operationalPriority.reason}
+                          />
                           {unreviewed > 0 && (
                             <span className="text-[10px] bg-[var(--status-error-bg)] text-[var(--status-error-fg)] border border-[var(--status-error-bd)] rounded px-1.5 py-0.5 font-semibold">
                               {unreviewed} awaiting review
@@ -321,7 +405,7 @@ function PatientsContent() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-4 mt-1.5 flex-wrap text-xs text-[var(--ink-500)]">
+                        <div className="flex items-center gap-3.5 mt-2 flex-wrap text-xs text-[var(--ink-500)]">
                           <span className="font-mono">Encounter #{item.encounter_id.slice(0, 8)}</span>
                           {item.opd_department && (
                             <span className="flex items-center gap-1 text-[var(--ink-700)]">
@@ -329,18 +413,15 @@ function PatientsContent() {
                               {item.opd_department}
                             </span>
                           )}
-                          <span className="flex items-center gap-1">
+
+                          <span className="inline-flex items-center gap-1 font-medium text-[var(--ink-600)] bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
                             <Clock className="w-3 h-3 text-[var(--ink-400)] shrink-0" aria-hidden="true" />
-                            {new Date(item.updated_at).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                            {waitingStr}
                           </span>
 
                           {total > 0 && (
                             <div className="flex items-center gap-1.5 text-[11px]">
-                              <span className="inline-flex items-center gap-1 text-[var(--ink-700)]">
+                              <span className="inline-flex items-center gap-1 text-[var(--ink-700)] font-medium">
                                 <Sparkles className="w-3 h-3 text-[var(--entity-ai-fg)]" aria-hidden="true" />
                                 {total} findings
                               </span>
@@ -350,10 +431,38 @@ function PatientsContent() {
                               </span>
                             </div>
                           )}
+
+                          <IntakeCompletenessBadge
+                            hasSummary={item.has_summary}
+                            totalEntities={total}
+                            documentsCount={0}
+                            showCategories={false}
+                          />
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            setQuickViewItem({
+                              encounter_id: item.encounter_id,
+                              patient_id: item.patient_id,
+                              patient_name: item.patient_name,
+                              encounter_status: item.encounter_status,
+                              opd_department: item.opd_department,
+                              created_at: item.created_at,
+                              updated_at: item.updated_at,
+                              unreviewed_count: item.unreviewed_count,
+                              total_entities: item.total_entities,
+                            })
+                          }
+                          className="flex items-center gap-1 text-xs font-semibold text-[var(--ink-700)] hover:bg-[var(--ink-100)]"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Quick View
+                        </Button>
+
                         <Button
                           size="sm"
                           onClick={() => router.push(`/doctor/patients/${item.encounter_id}`)}
@@ -374,7 +483,7 @@ function PatientsContent() {
       {/* ── TAB 2: Available Pool (Unassigned Hospital Cases) ── */}
       {activeTab === "available" && (
         <div className="space-y-4">
-          {/* Filter Bar */}
+          {/* Filter Bar with Sort */}
           <div className="p-3 bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-xs">
             <div className="flex-1 relative">
               <Search className="w-4 h-4 text-[var(--ink-400)] absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
@@ -392,7 +501,7 @@ function PatientsContent() {
               <select
                 value={filterDept}
                 onChange={(e) => setFilterDept(e.target.value)}
-                className="text-xs border border-[var(--ink-200)] rounded-md px-2 py-1 bg-[var(--bg-surface)] text-[var(--ink-800)] focus:outline-none"
+                className="text-xs border border-[var(--ink-200)] rounded-md px-2 py-1 bg-[var(--bg-surface)] text-[var(--ink-800)] focus:outline-none cursor-pointer"
               >
                 <option value="all">All Departments</option>
                 {allDepartments.map((dept) => (
@@ -401,6 +510,20 @@ function PatientsContent() {
                   </option>
                 ))}
               </select>
+
+              <div className="flex items-center gap-1 pl-2 border-l border-[var(--ink-200)]">
+                <ArrowUpDown className="w-3 h-3 text-[var(--ink-400)]" aria-hidden="true" />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="text-xs border border-[var(--ink-200)] rounded-md px-2 py-1 bg-[var(--bg-surface)] text-[var(--ink-800)] focus:outline-none cursor-pointer font-medium"
+                >
+                  <option value="priority">Priority First</option>
+                  <option value="waiting">Waiting Longest</option>
+                  <option value="newest">Newest First</option>
+                  <option value="updated">Recently Updated</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -421,50 +544,75 @@ function PatientsContent() {
               </div>
             ) : (
               <div className="divide-y divide-[var(--ink-200)]">
-                {filteredAvailable.map((item: AvailableEncounterItem) => (
-                  <div
-                    key={item.encounter_id}
-                    className="px-5 py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-[var(--bg-surface-2)] transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="text-sm font-bold text-[var(--ink-900)]">
-                          {item.patient_name}
-                        </span>
-                        <StatusBadge status={item.queue_status} />
-                      </div>
-                      <div className="flex items-center gap-4 mt-1.5 flex-wrap text-xs text-[var(--ink-500)]">
-                        <span className="font-mono">Encounter #{item.encounter_id.slice(0, 8)}</span>
-                        {item.opd_department && (
-                          <span className="flex items-center gap-1 text-[var(--ink-700)]">
-                            <Building2 className="w-3 h-3 text-[var(--ink-400)] shrink-0" aria-hidden="true" />
-                            {item.opd_department}
-                          </span>
-                        )}
-                        <span>{item.total_entities} extracted clinical entities</span>
-                        <span>
-                          {new Date(item.created_at).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </span>
-                      </div>
-                    </div>
+                {filteredAvailable.map((item: AvailableEncounterItem) => {
+                  const operationalPriority = calculateAttentionPriority(item);
+                  const waitingStr = formatWaitingTime(item.created_at);
 
-                    <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        isLoading={assignMut.isPending}
-                        onClick={() => handleClaimAndReview(item.encounter_id)}
-                        className="text-xs font-semibold flex items-center gap-1.5"
-                      >
-                        Claim &amp; Review <ArrowRight className="w-3.5 h-3.5" />
-                      </Button>
+                  return (
+                    <div
+                      key={item.encounter_id}
+                      className="px-5 py-3.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 hover:bg-[var(--bg-surface-2)] transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span className="text-sm font-bold text-[var(--ink-900)]">
+                            {item.patient_name}
+                          </span>
+                          <StatusBadge status={item.queue_status} />
+                          <PriorityBadge
+                            level={operationalPriority.level}
+                            reason={operationalPriority.reason}
+                          />
+                        </div>
+                        <div className="flex items-center gap-3.5 mt-2 flex-wrap text-xs text-[var(--ink-500)]">
+                          <span className="font-mono">Encounter #{item.encounter_id.slice(0, 8)}</span>
+                          {item.opd_department && (
+                            <span className="flex items-center gap-1 text-[var(--ink-700)]">
+                              <Building2 className="w-3 h-3 text-[var(--ink-400)] shrink-0" aria-hidden="true" />
+                              {item.opd_department}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 font-medium text-[var(--ink-600)] bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
+                            <Clock className="w-3 h-3 text-[var(--ink-400)] shrink-0" aria-hidden="true" />
+                            {waitingStr}
+                          </span>
+                          <span>{item.total_entities} extracted entities</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            setQuickViewItem({
+                              encounter_id: item.encounter_id,
+                              patient_name: item.patient_name,
+                              encounter_status: item.queue_status,
+                              opd_department: item.opd_department,
+                              created_at: item.created_at,
+                              updated_at: item.updated_at,
+                              total_entities: item.total_entities,
+                            })
+                          }
+                          className="flex items-center gap-1 text-xs font-semibold text-[var(--ink-700)] hover:bg-[var(--ink-100)]"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Quick View
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          isLoading={assignMut.isPending}
+                          onClick={() => handleClaimAndReview(item.encounter_id)}
+                          className="text-xs font-semibold flex items-center gap-1.5"
+                        >
+                          Claim &amp; Review <ArrowRight className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -528,7 +676,7 @@ function PatientsContent() {
             </div>
           )}
 
-          {/* Search Result Card (Single Bordered Panel, Full Width) */}
+          {/* Search Result Card */}
           {searchResult && (
             <div className="border border-[var(--clinical-mid)] rounded-lg bg-[var(--bg-surface)] shadow-xs overflow-hidden">
               <div className="bg-[var(--clinical-light)]/40 border-b border-[var(--clinical-mid)] px-5 py-3.5 flex items-center justify-between flex-wrap gap-2">
@@ -612,13 +760,35 @@ function PatientsContent() {
                           </div>
                         </div>
 
-                        <Button
-                          size="sm"
-                          onClick={() => router.push(`/doctor/patients/${enc.encounter_id}`)}
-                          className="text-xs font-semibold flex items-center gap-1.5 shrink-0"
-                        >
-                          Open Clinical Workspace <ArrowRight className="w-3.5 h-3.5" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              setQuickViewItem({
+                                encounter_id: enc.encounter_id,
+                                patient_id: searchResult.patient_id,
+                                patient_name: searchResult.patient_name,
+                                encounter_status: enc.queue_status,
+                                opd_department: enc.opd_department,
+                                created_at: enc.submitted_at || undefined,
+                                unreviewed_count: enc.unreviewed_count,
+                                total_entities: enc.total_entities,
+                              })
+                            }
+                            className="text-xs font-semibold text-[var(--ink-700)]"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> Quick View
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            onClick={() => router.push(`/doctor/patients/${enc.encounter_id}`)}
+                            className="text-xs font-semibold flex items-center gap-1.5 shrink-0"
+                          >
+                            Open Workspace <ArrowRight className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -628,6 +798,21 @@ function PatientsContent() {
           )}
         </div>
       )}
+
+      {/* ── Reusable Patient Quick View Drawer ── */}
+      <PatientQuickView
+        isOpen={!!quickViewItem}
+        onClose={() => setQuickViewItem(null)}
+        encounterId={quickViewItem?.encounter_id ?? null}
+        patientName={quickViewItem?.patient_name ?? ""}
+        patientId={quickViewItem?.patient_id}
+        opdDepartment={quickViewItem?.opd_department}
+        status={quickViewItem?.encounter_status}
+        createdAt={quickViewItem?.created_at}
+        updatedAt={quickViewItem?.updated_at}
+        unreviewedCount={quickViewItem?.unreviewed_count}
+        totalEntities={quickViewItem?.total_entities}
+      />
     </div>
   );
 }

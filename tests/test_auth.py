@@ -124,3 +124,37 @@ def test_me_invalid_token_rejected(client: TestClient):
     # HTTPBearer accepts the Bearer format but the JWT is invalid → 401 from our handler
     r = client.get("/auth/me", headers={"Authorization": "Bearer totally-fake-token"})
     assert r.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# CORS Preflight — Regression tests for browser local development
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("origin", [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://[::1]:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://[::1]:3001",
+])
+def test_cors_preflight_login_allowed_origins(client: TestClient, origin: str):
+    headers = {
+        "Origin": origin,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization, content-type",
+    }
+    r = client.options("/auth/login", headers=headers)
+    assert r.status_code == 200
+    assert r.headers.get("access-control-allow-origin") == origin
+    assert r.headers.get("access-control-allow-credentials") == "true"
+
+
+def test_cors_preflight_disallowed_origin(client: TestClient):
+    headers = {
+        "Origin": "http://evil.com",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization, content-type",
+    }
+    r = client.options("/auth/login", headers=headers)
+    assert r.status_code == 400
+

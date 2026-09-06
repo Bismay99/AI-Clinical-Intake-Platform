@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, User, Building2, Hash, Calendar, ShieldCheck } from "lucide-react";
+import { ArrowLeft, User, Building2, Hash, Calendar, UserCheck } from "lucide-react";
 import { StatusBadge } from "@/components/doctor/StatusBadge";
+import { formatDoctorName } from "@/lib/doctorUtils";
 
 interface PatientHeaderProps {
   patientName: string;
@@ -15,6 +16,7 @@ interface PatientHeaderProps {
   visitDate?: string | null;
   age?: string | number | null;
   gender?: string | null;
+  priorityBadge?: React.ReactNode;
   /** Slot for primary clinical actions (e.g. Finalize Consultation button) */
   action?: React.ReactNode;
 }
@@ -30,6 +32,7 @@ export function PatientHeader({
   visitDate,
   age,
   gender,
+  priorityBadge,
   action,
 }: PatientHeaderProps) {
   return (
@@ -92,6 +95,13 @@ export function PatientHeader({
                   </span>
                 )}
 
+                {assignedDoctor && (
+                  <span className="inline-flex items-center gap-1 text-[var(--ink-700)]">
+                    <UserCheck className="w-3 h-3 text-[var(--ink-400)]" aria-hidden="true" />
+                    <span>{formatDoctorName(assignedDoctor)}</span>
+                  </span>
+                )}
+
                 {visitDate && (
                   <span className="inline-flex items-center gap-1 text-[var(--ink-500)]">
                     <Calendar className="w-3 h-3 text-[var(--ink-400)]" aria-hidden="true" />
@@ -110,6 +120,7 @@ export function PatientHeader({
 
           {/* Right Status & Action Slotted In */}
           <div className="flex items-center gap-2.5 shrink-0 flex-wrap self-start md:self-auto">
+            {priorityBadge}
             <StatusBadge status={status} />
             {action}
           </div>

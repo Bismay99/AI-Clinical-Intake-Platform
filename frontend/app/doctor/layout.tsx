@@ -3,12 +3,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Users, UserCircle, LogOut, Menu, X, Stethoscope,
+  LayoutDashboard, Users, UserCircle, LogOut, Menu, X, Stethoscope, FolderHeart,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { getQueue } from "@/services/doctor.service";
+import { formatDoctorName } from "@/lib/doctorUtils";
 
 const navGroups = [
   {
@@ -16,6 +17,7 @@ const navGroups = [
     items: [
       { href: "/doctor/dashboard", label: "Command Center", icon: LayoutDashboard },
       { href: "/doctor/patients",  label: "Clinical Queue",  icon: Users },
+      { href: "/doctor/records",   label: "Patient Records", icon: FolderHeart },
     ],
   },
   {
@@ -154,7 +156,7 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
       <div className="px-3 py-4" style={{ borderTop: "1px solid var(--sidebar-border)" }}>
         <div className="px-3 py-2 mb-1 flex items-center justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-semibold truncate" style={{ color: "var(--sidebar-fg)" }}>{user?.full_name ?? "Doctor"}</p>
+            <p className="text-xs font-semibold truncate" style={{ color: "var(--sidebar-fg)" }}>{formatDoctorName(user?.full_name)}</p>
             <p className="text-[10px] truncate" style={{ color: "var(--sidebar-muted)" }}>{user?.hospital_affiliation ?? user?.email}</p>
           </div>
           {pendingCount > 0 && (

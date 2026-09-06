@@ -66,9 +66,18 @@ cors_origins = list(settings.cors_origins)
 if settings.frontend_url and settings.frontend_url not in cors_origins:
     cors_origins.append(settings.frontend_url)
 
+# In development/test, allow all localhost/loopback development ports and RFC1918 LAN origins
+# without allowing arbitrary external web origins.
+cors_origin_regex = settings.cors_origin_regex
+if not cors_origin_regex and settings.app_env in ("development", "test"):
+    cors_origin_regex = (
+        r"^https?://(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$"
+    )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

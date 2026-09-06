@@ -22,6 +22,12 @@ function getBaseUrl(): string {
   return url.replace(/\/$/, "");
 }
 
+function resolveUrl(path: string): string {
+  const base = getBaseUrl();
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${normalizedPath}`;
+}
+
 export function storeToken(token: string): void {
   if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, token);
 }
@@ -89,7 +95,7 @@ async function handleResponse<T>(response: Response, requestPath?: string): Prom
 }
 
 export async function apiGet<T>(path: string, tokenOverride?: string): Promise<T> {
-  const r = await fetch(`${getBaseUrl()}${path}`, {
+  const r = await fetch(resolveUrl(path), {
     method: "GET",
     headers: buildHeaders(false, tokenOverride),
   });
@@ -97,7 +103,7 @@ export async function apiGet<T>(path: string, tokenOverride?: string): Promise<T
 }
 
 export async function apiPost<T>(path: string, body?: unknown, tokenOverride?: string): Promise<T> {
-  const r = await fetch(`${getBaseUrl()}${path}`, {
+  const r = await fetch(resolveUrl(path), {
     method: "POST",
     headers: buildHeaders(false, tokenOverride),
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -106,7 +112,7 @@ export async function apiPost<T>(path: string, body?: unknown, tokenOverride?: s
 }
 
 export async function apiPatch<T>(path: string, body?: unknown, tokenOverride?: string): Promise<T> {
-  const r = await fetch(`${getBaseUrl()}${path}`, {
+  const r = await fetch(resolveUrl(path), {
     method: "PATCH",
     headers: buildHeaders(false, tokenOverride),
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -115,7 +121,7 @@ export async function apiPatch<T>(path: string, body?: unknown, tokenOverride?: 
 }
 
 export async function apiDelete<T>(path: string, tokenOverride?: string): Promise<T> {
-  const r = await fetch(`${getBaseUrl()}${path}`, {
+  const r = await fetch(resolveUrl(path), {
     method: "DELETE",
     headers: buildHeaders(false, tokenOverride),
   });
@@ -123,7 +129,7 @@ export async function apiDelete<T>(path: string, tokenOverride?: string): Promis
 }
 
 export async function apiPostForm<T>(path: string, formData: FormData, tokenOverride?: string): Promise<T> {
-  const url = `${getBaseUrl()}${path}`;
+  const url = resolveUrl(path);
   const headers = buildHeaders(true, tokenOverride);
   const hasAuthorizationToken = typeof headers["Authorization"] === "string" && headers["Authorization"].length > 0;
   const tokenLength = hasAuthorizationToken ? headers["Authorization"].length : 0;

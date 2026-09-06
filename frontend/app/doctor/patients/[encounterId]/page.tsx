@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,6 +11,10 @@ import {
 import { PatientHeader } from "@/components/doctor/PatientHeader";
 import { EntityVerificationRow } from "@/components/doctor/EntityVerificationRow";
 import { StatusBadge } from "@/components/doctor/StatusBadge";
+import { PriorityBadge } from "@/components/doctor/PriorityBadge";
+import { EvidenceProvenanceSummary } from "@/components/doctor/EvidenceProvenanceSummary";
+import { SafetyAttentionFlags } from "@/components/doctor/SafetyAttentionFlags";
+import { calculateAttentionPriority } from "@/lib/doctorUtils";
 import { Button } from "@/components/ui/Button";
 import {
   ClinicalSummarySkeleton,
@@ -31,9 +35,7 @@ import {
   FileCheck2,
   Pill,
   Search,
-  ExternalLink,
   ShieldAlert,
-  Sparkles,
   ArrowRight,
 } from "lucide-react";
 import type {
@@ -240,6 +242,13 @@ export default function EncounterReviewPage() {
     </span>
   );
 
+  const operationalPriority = calculateAttentionPriority({
+    encounter_status: finalizeSuccess ? "completed" : "ready_for_review",
+    unreviewed_count: unreviewedCount,
+    total_entities: entities.length,
+    created_at: summary.generated_at,
+  });
+
   return (
     <div className="space-y-5 pb-16">
       {/* ── 1. Compact Workstation Patient Header ── */}
@@ -249,45 +258,56 @@ export default function EncounterReviewPage() {
         encounterId={summary.encounter_id}
         department={summary.opd_department || "General OPD"}
         status={finalizeSuccess ? "completed" : "ready_for_review"}
+        priorityBadge={
+          <PriorityBadge level={operationalPriority.level} reason={operationalPriority.reason} />
+        }
         backHref="/doctor/patients"
         visitDate={summary.generated_at}
         action={headerAction}
       />
 
       {/* Physician Governance & Verification Progress Bar */}
-      <div className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[var(--clinical)]" />
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)]">
-              Physician Governance &amp; Verification Progress
-            </span>
+      <div className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-4 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[var(--clinical)]" />
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)]">
+                Physician Governance &amp; Verification Progress
+              </span>
+            </div>
+            <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs text-[var(--ink-500)]">
+              <span>AI Extracted: <strong className="text-[var(--ink-900)] font-mono">{entities.length}</strong></span>
+              <span>·</span>
+              <span>Doctor Verified: <strong className="text-[var(--status-success-fg)] font-mono">{verifiedCount}</strong></span>
+              <span>·</span>
+              <span>Doctor Edited: <strong className="text-[var(--status-info-fg)] font-mono">{editedCount}</strong></span>
+              <span>·</span>
+              <span>Doctor Rejected: <strong className="text-[var(--status-error-fg)] font-mono">{rejectedCount}</strong></span>
+              <span>·</span>
+              <span>Awaiting Review: <strong className={unreviewedCount > 0 ? "text-[var(--status-pending-fg)] font-mono font-bold" : "text-[var(--ink-500)] font-mono"}>{unreviewedCount}</strong></span>
+            </div>
           </div>
-          <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs text-[var(--ink-500)]">
-            <span>AI Extracted: <strong className="text-[var(--ink-900)] font-mono">{entities.length}</strong></span>
-            <span>·</span>
-            <span>Doctor Verified: <strong className="text-[var(--status-success-fg)] font-mono">{verifiedCount}</strong></span>
-            <span>·</span>
-            <span>Doctor Edited: <strong className="text-[var(--status-info-fg)] font-mono">{editedCount}</strong></span>
-            <span>·</span>
-            <span>Doctor Rejected: <strong className="text-[var(--status-error-fg)] font-mono">{rejectedCount}</strong></span>
-            <span>·</span>
-            <span>Awaiting Review: <strong className={unreviewedCount > 0 ? "text-[var(--status-pending-fg)] font-mono font-bold" : "text-[var(--ink-500)] font-mono"}>{unreviewedCount}</strong></span>
-          </div>
+          {unreviewedCount > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setActiveTab("findings");
+                setStatusFilter("unreviewed");
+              }}
+              className="text-xs self-start sm:self-auto cursor-pointer flex-shrink-0"
+            >
+              Review Pending ({unreviewedCount}) →
+            </Button>
+          )}
         </div>
-        {unreviewedCount > 0 && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              setActiveTab("findings");
-              setStatusFilter("unreviewed");
-            }}
-            className="text-xs self-start sm:self-auto cursor-pointer flex-shrink-0"
-          >
-            Review Pending ({unreviewedCount}) →
-          </Button>
-        )}
+
+        {/* Evidence Provenance & Workflow / Safety Flags Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 mt-3 border-t border-[var(--ink-200)]">
+          <EvidenceProvenanceSummary entities={entities} />
+          <SafetyAttentionFlags unreviewedCount={unreviewedCount} entities={entities} />
+        </div>
       </div>
 
       {/* ── 2. Finalization Success Banner ── */}

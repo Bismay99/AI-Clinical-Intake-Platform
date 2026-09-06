@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { getDoctorProfile, updateDoctorProfile } from "@/services/doctor.service";
 import { ApiError } from "@/lib/api";
+import { formatDoctorName } from "@/lib/doctorUtils";
 import type { DoctorProfileResponse, DoctorProfileUpdate } from "@/types/doctor";
 import {
   UserCircle,
@@ -178,7 +179,7 @@ export default function DoctorProfilePage() {
             </div>
             <div>
               <h2 className="text-base font-bold text-[var(--ink-900)] leading-none">
-                Dr. {doctorName}
+                {formatDoctorName(doctorName)}
               </h2>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--status-success-fg)] bg-[var(--status-success-bg)] border border-[var(--status-success-bd)] px-2 py-0.2 rounded">
