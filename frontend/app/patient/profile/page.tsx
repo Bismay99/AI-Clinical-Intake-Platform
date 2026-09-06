@@ -144,8 +144,8 @@ export default function PatientProfile() {
   if (isLoadingProfile) {
     return (
       <div className="flex items-center justify-center py-24">
-        <div className="flex items-center gap-3 text-[#667085] bg-white p-5 rounded-2xl border border-[#E4E7EC] shadow-xs">
-          <Spinner className="text-[#155EEF]" />
+        <div className="flex items-center gap-3 text-[var(--ink-500)] bg-[var(--bg-surface)] p-5 rounded-lg border border-[var(--ink-200)] shadow-[var(--shadow-sm)]">
+          <Spinner />
           <span className="text-sm font-medium">Loading patient profile…</span>
         </div>
       </div>
@@ -160,7 +160,7 @@ export default function PatientProfile() {
   if (profileError) {
     return (
       <div className="max-w-lg mx-auto py-10">
-        <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-sm text-[#D92D20]">
+        <div className="p-4 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-sm text-[var(--status-error-fg)]">
           Could not load your profile details. Please try refreshing.
         </div>
       </div>
@@ -172,13 +172,13 @@ export default function PatientProfile() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Page Title & Actions */}
-      <div className="pb-3 border-b border-[#E4E7EC] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="pb-3 border-b border-[var(--ink-200)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#172033] flex items-center gap-2">
-            <User className="w-6 h-6 text-[#155EEF]" />
+          <h1 className="text-2xl font-bold text-[var(--ink-900)] flex items-center gap-2">
+            <User className="w-6 h-6 text-[var(--clinical)]" />
             <span>Patient Profile</span>
           </h1>
-          <p className="text-sm text-[#667085] mt-1">
+          <p className="text-sm text-[var(--ink-500)] mt-1">
             Your registered identity and clinical healthcare portal credentials.
           </p>
         </div>
@@ -187,7 +187,7 @@ export default function PatientProfile() {
             variant="secondary"
             size="sm"
             onClick={startEdit}
-            className="flex items-center gap-1.5 self-start sm:self-auto text-xs font-semibold text-[#155EEF] border-blue-200 hover:bg-blue-50"
+            className="flex items-center gap-1.5 self-start sm:self-auto"
           >
             <Edit3 className="w-3.5 h-3.5" />
             <span>Edit Profile</span>
@@ -197,20 +197,18 @@ export default function PatientProfile() {
 
       {/* Success Notification */}
       {saveSuccess && (
-        <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-sm text-emerald-800 flex items-center gap-2.5">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+        <div className="p-3 rounded-md border border-[var(--status-success-bd)] bg-[var(--status-success-bg)] text-sm text-[var(--status-success-fg)] flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           <span className="font-semibold">Profile updated successfully. Changes are now active across your portal.</span>
         </div>
       )}
 
       {/* ── Section 1: Personal Information (View or Edit) ── */}
-      <Card className="border-[#E4E7EC] shadow-xs">
-        <CardHeader className="pb-3 border-b border-[#E4E7EC] flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-bold text-[#172033]">
-            Personal Information
-          </CardTitle>
+      <Card>
+        <CardHeader className="pb-3 border-b border-[var(--ink-200)] flex flex-row items-center justify-between">
+          <CardTitle>Personal Information</CardTitle>
           {isEditing && (
-            <span className="text-xs font-medium text-[#155EEF] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded">
+            <span className="text-xs font-medium text-[var(--clinical)] bg-[var(--clinical-light)] border border-[var(--clinical-mid)] px-2 py-0.5 rounded">
               Editing Mode
             </span>
           )}
@@ -219,8 +217,8 @@ export default function PatientProfile() {
           {isEditing ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {formError && (
-                <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-xs text-red-700 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                <div className="p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-xs text-[var(--status-error-fg)] flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{formError}</span>
                 </div>
               )}
@@ -237,15 +235,15 @@ export default function PatientProfile() {
 
               {/* Email (Read-Only) */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700 flex items-center justify-between">
+                <label className="text-sm font-medium text-[var(--ink-700)] flex items-center justify-between">
                   <span>Email Address</span>
-                  <span className="text-xs text-[#667085] font-normal">Managed by login account</span>
+                  <span className="text-xs text-[var(--ink-500)] font-normal">Managed by login account</span>
                 </label>
                 <input
                   type="text"
                   disabled
                   value={user?.email || "—"}
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-[#F7F9FC] px-3 text-sm text-[#667085] cursor-not-allowed"
+                  className="h-10 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface-2)] px-3 text-sm text-[var(--ink-500)] cursor-not-allowed"
                 />
               </div>
 
@@ -260,12 +258,12 @@ export default function PatientProfile() {
                 />
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="gender" className="text-sm font-medium text-gray-700">Gender</label>
+                  <label htmlFor="gender" className="text-sm font-medium text-[var(--ink-700)]">Gender</label>
                   <select
                     id="gender"
                     value={formData.gender || ""}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                    className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-10 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
                   >
                     <option value="">Select Gender</option>
                     <option value="male">Male</option>
@@ -288,12 +286,12 @@ export default function PatientProfile() {
                 />
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="preferred_language" className="text-sm font-medium text-gray-700">Preferred Language</label>
+                  <label htmlFor="preferred_language" className="text-sm font-medium text-[var(--ink-700)]">Preferred Language</label>
                   <select
                     id="preferred_language"
                     value={formData.preferred_language || "en"}
                     onChange={(e) => setFormData({ ...formData, preferred_language: e.target.value })}
-                    className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-10 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
                   >
                     <option value="en">English</option>
                     <option value="hi">Hindi</option>
@@ -312,7 +310,7 @@ export default function PatientProfile() {
               />
 
               {/* Form Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E4E7EC]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--ink-200)]">
                 <Button
                   type="button"
                   variant="secondary"
@@ -328,11 +326,11 @@ export default function PatientProfile() {
                   type="submit"
                   size="sm"
                   disabled={updateMutation.isPending}
-                  className="bg-[#155EEF] hover:bg-[#1048C6] text-white flex items-center gap-1.5"
+                  className="flex items-center gap-1.5"
                 >
                   {updateMutation.isPending ? (
                     <>
-                      <Spinner className="w-3.5 h-3.5 text-white" />
+                      <Spinner />
                       <span>Saving Changes…</span>
                     </>
                   ) : (
@@ -345,132 +343,113 @@ export default function PatientProfile() {
               </div>
             </form>
           ) : (
-            <div className="divide-y divide-[#E4E7EC]">
-              <div className="py-3 flex items-start justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <User className="w-4 h-4 text-[#667085]" />
-                  <span className="text-xs font-semibold text-[#667085]">Full Name</span>
+            <div className="divide-y divide-[var(--ink-200)]">
+              {[
+                { icon: User, label: "Full Name", value: profile.full_name },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="py-3 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4 text-[var(--ink-400)]" />
+                    <span className="text-xs font-semibold text-[var(--ink-500)]">{label}</span>
+                  </div>
+                  <span className="text-sm font-medium text-[var(--ink-900)]">{value}</span>
                 </div>
-                <span className="text-sm font-medium text-[#172033]">{profile.full_name}</span>
-              </div>
+              ))}
 
-              <div className="py-3 flex items-start justify-between gap-4">
+              <div className="py-3 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">
-                  <Mail className="w-4 h-4 text-[#667085]" />
-                  <span className="text-xs font-semibold text-[#667085]">Email Address</span>
+                  <Mail className="w-4 h-4 text-[var(--ink-400)]" />
+                  <span className="text-xs font-semibold text-[var(--ink-500)]">Email Address</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-sm text-[#172033]">{user?.email || "Not available"}</span>
-                  <span className="block text-[11px] text-[#667085]">Managed by login account</span>
+                  <span className="text-sm text-[var(--ink-900)]">{user?.email || "Not available"}</span>
+                  <span className="block text-[11px] text-[var(--ink-400)]">Managed by login account</span>
                 </div>
               </div>
 
-              <div className="py-3 flex items-start justify-between gap-4">
+              <div className="py-3 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2.5">
-                  <Fingerprint className="w-4 h-4 text-[#155EEF]" />
-                  <span className="text-xs font-semibold text-[#667085]">Patient UID</span>
+                  <Fingerprint className="w-4 h-4 text-[var(--clinical)]" />
+                  <span className="text-xs font-semibold text-[var(--ink-500)]">Patient UID</span>
                 </div>
-                <span className="font-mono text-xs text-[#155EEF] font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                <span className="font-mono text-xs text-[var(--clinical)] font-bold bg-[var(--clinical-light)] px-2 py-0.5 rounded border border-[var(--clinical-mid)]">
                   {profile.id}
                 </span>
               </div>
 
-              <div className="py-3 flex items-start justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <Calendar className="w-4 h-4 text-[#667085]" />
-                  <span className="text-xs font-semibold text-[#667085]">Date of Birth</span>
+              {[
+                { icon: Calendar, label: "Date of Birth", value: profile.date_of_birth || "Not provided" },
+                { icon: User, label: "Gender", value: profile.gender ? profile.gender.replace(/_/g, " ") : "Not provided", className: "capitalize" },
+                { icon: Phone, label: "Phone", value: profile.phone || "Not provided" },
+                { icon: Globe, label: "Preferred Language", value: languageLabel(profile.preferred_language) },
+              ].map(({ icon: Icon, label, value, className }) => (
+                <div key={label} className="py-3 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <Icon className="w-4 h-4 text-[var(--ink-400)]" />
+                    <span className="text-xs font-semibold text-[var(--ink-500)]">{label}</span>
+                  </div>
+                  <span className={`text-sm text-[var(--ink-900)] ${className || ""}`}>{value}</span>
                 </div>
-                <span className="text-sm text-[#172033]">{profile.date_of_birth || "Not provided"}</span>
-              </div>
-
-              <div className="py-3 flex items-start justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <User className="w-4 h-4 text-[#667085]" />
-                  <span className="text-xs font-semibold text-[#667085]">Gender</span>
-                </div>
-                <span className="text-sm text-[#172033] capitalize">{profile.gender ? profile.gender.replace(/_/g, " ") : "Not provided"}</span>
-              </div>
-
-              <div className="py-3 flex items-start justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <Phone className="w-4 h-4 text-[#667085]" />
-                  <span className="text-xs font-semibold text-[#667085]">Phone</span>
-                </div>
-                <span className="text-sm text-[#172033]">{profile.phone || "Not provided"}</span>
-              </div>
-
-              <div className="py-3 flex items-start justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <Globe className="w-4 h-4 text-[#667085]" />
-                  <span className="text-xs font-semibold text-[#667085]">Preferred Language</span>
-                </div>
-                <span className="text-sm text-[#172033]">{languageLabel(profile.preferred_language)}</span>
-              </div>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
 
       {/* ── Section 2: Health Identity & Hospital Integration ── */}
-      <Card className="border-[#E4E7EC] shadow-xs">
-        <CardHeader className="pb-3 border-b border-[#E4E7EC]">
-          <CardTitle className="text-sm font-bold text-[#172033] flex items-center gap-2">
-            <Shield className="w-4 h-4 text-[#0F9D8A]" />
-            <span>Health Identity & Hospital Integration</span>
+      <Card>
+        <CardHeader className="pb-3 border-b border-[var(--ink-200)]">
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-[var(--clinical)]" />
+            <span>Health Identity &amp; Hospital Integration</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-4 space-y-3">
           <div className="flex items-center justify-between text-xs py-1">
-            <span className="text-[#667085]">Hospital Identifier (HIS):</span>
-            <span className="font-mono text-[#172033] font-medium">
+            <span className="text-[var(--ink-500)]">Hospital Identifier (HIS):</span>
+            <span className="font-mono text-[var(--ink-800)] font-medium">
               {profile.hospital_identifier || "Assigned by hospital on check-in"}
             </span>
           </div>
           <div className="flex items-center justify-between text-xs py-1">
-            <span className="text-[#667085]">ABHA Health ID:</span>
-            <span className="text-[#667085] italic">Not linked yet</span>
+            <span className="text-[var(--ink-500)]">ABHA Health ID:</span>
+            <span className="text-[var(--ink-400)] italic">Not linked yet</span>
           </div>
         </CardContent>
       </Card>
 
       {/* ── Section 3: Clinical Records Quick Access ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="border-[#E4E7EC] shadow-2xs">
+        <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <ClipboardList className="w-4 h-4 text-[#155EEF]" />
-                <span className="text-xs font-bold text-[#172033]">Health Reports</span>
+                <ClipboardList className="w-4 h-4 text-[var(--clinical)]" />
+                <span className="text-xs font-bold text-[var(--ink-900)]">Health Reports</span>
               </div>
-              <p className="text-xs text-[#667085]">
+              <p className="text-xs text-[var(--ink-500)]">
                 {metrics ? `${metrics.reports_count} completed reports` : "View past reports"}
               </p>
             </div>
-            <Link
-              href="/patient/reports"
-              className="text-xs font-semibold text-[#155EEF] hover:underline flex items-center gap-1"
-            >
+            <Link href="/patient/reports" className="text-xs font-semibold text-[var(--clinical)] hover:underline flex items-center gap-1">
               <span>View</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </CardContent>
         </Card>
 
-        <Card className="border-[#E4E7EC] shadow-2xs">
+        <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#0F9D8A]" />
-                <span className="text-xs font-bold text-[#172033]">Medical Documents</span>
+                <FileText className="w-4 h-4 text-[var(--clinical)]" />
+                <span className="text-xs font-bold text-[var(--ink-900)]">Medical Documents</span>
               </div>
-              <p className="text-xs text-[#667085]">
+              <p className="text-xs text-[var(--ink-500)]">
                 {metrics ? `${metrics.documents_count} uploaded files` : "Manage files"}
               </p>
             </div>
-            <Link
-              href="/patient/documents"
-              className="text-xs font-semibold text-[#0F9D8A] hover:underline flex items-center gap-1"
-            >
+            <Link href="/patient/documents" className="text-xs font-semibold text-[var(--clinical)] hover:underline flex items-center gap-1">
               <span>View</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -479,19 +458,19 @@ export default function PatientProfile() {
       </div>
 
       {/* ── Section 4: Security & Sign Out ── */}
-      <Card className="border-[#E4E7EC] shadow-xs">
+      <Card>
         <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-bold text-[#172033]">Security & Account Session</p>
-            <p className="text-xs text-[#667085] mt-0.5">
+            <p className="text-sm font-bold text-[var(--ink-900)]">Security &amp; Account Session</p>
+            <p className="text-xs text-[var(--ink-500)] mt-0.5">
               Securely terminate your current session on this device.
             </p>
           </div>
           <Button
-            variant="secondary"
+            variant="destructive"
             size="sm"
             onClick={handleLogout}
-            className="text-xs text-[#D92D20] border-red-200 hover:bg-red-50 flex items-center justify-center gap-1.5"
+            className="flex items-center justify-center gap-1.5"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>

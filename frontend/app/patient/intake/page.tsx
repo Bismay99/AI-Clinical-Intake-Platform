@@ -357,45 +357,45 @@ export default function PatientIntakePage() {
   if ((intake.phase === "submitted" && intake.submitResult) || (!intake.sessionId && isEncounterAwaitingReview)) {
     return (
       <div className="max-w-2xl mx-auto">
-        <Card className="border-[#12B76A] border-opacity-40">
+        <Card className="border-[var(--status-success-bd)]">
           <CardContent className="py-10 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 mb-6">
-              <CheckCircle2 className="w-8 h-8 text-[#12B76A]" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--status-success-bg)] border border-[var(--status-success-bd)] mb-6">
+              <CheckCircle2 className="w-8 h-8 text-[var(--status-success-fg)]" />
             </div>
-            <h1 className="text-2xl font-bold text-[#172033] mb-2">Pre-Consultation Complete</h1>
-            <p className="text-[#667085] mb-8">
+            <h1 className="text-2xl font-bold text-[var(--ink-900)] mb-2">Pre-Consultation Complete</h1>
+            <p className="text-[var(--ink-500)] mb-8">
               Your medical history has been securely submitted for doctor review.
             </p>
 
-            <div className="bg-[#F7F9FC] rounded-xl p-6 text-left space-y-3 mb-8">
+            <div className="bg-[var(--bg-surface-2)] rounded-lg p-6 text-left space-y-3 mb-8 border border-[var(--ink-200)]">
               <div className="flex justify-between text-sm">
-                <span className="text-[#667085]">Department</span>
-                <span className="font-medium text-[#172033]">{currentEncounter?.opd_department || "General"}</span>
+                <span className="text-[var(--ink-500)]">Department</span>
+                <span className="font-medium text-[var(--ink-900)]">{currentEncounter?.opd_department || "General"}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-[#667085]">Status</span>
-                <span className="font-medium text-[#12B76A]">Ready for Doctor Review</span>
+                <span className="text-[var(--ink-500)]">Status</span>
+                <span className="font-medium text-[var(--status-success-fg)]">Ready for Doctor Review</span>
               </div>
               {intake.submitResult ? (
                 <>
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#667085]">Clinical fields captured</span>
-                    <span className="font-medium text-[#172033]">{intake.submitResult.total_entities}</span>
+                    <span className="text-[var(--ink-500)]">Clinical fields captured</span>
+                    <span className="font-medium text-[var(--ink-900)]">{intake.submitResult.total_entities}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-[#667085]">Timeline events</span>
-                    <span className="font-medium text-[#172033]">{intake.submitResult.timeline_events}</span>
+                    <span className="text-[var(--ink-500)]">Timeline events</span>
+                    <span className="font-medium text-[var(--ink-900)]">{intake.submitResult.timeline_events}</span>
                   </div>
                   {intake.submitResult.summary_preview && (
-                    <div className="pt-3 border-t border-[#E4E7EC]">
-                      <p className="text-xs text-[#667085] mb-1">Summary preview</p>
-                      <p className="text-sm text-[#172033]">{intake.submitResult.summary_preview}</p>
+                    <div className="pt-3 border-t border-[var(--ink-200)]">
+                      <p className="text-xs text-[var(--ink-500)] mb-1">Summary preview</p>
+                      <p className="text-sm text-[var(--ink-900)]">{intake.submitResult.summary_preview}</p>
                     </div>
                   )}
                 </>
               ) : (
-                <div className="pt-3 border-t border-[#E4E7EC]">
-                  <p className="text-xs text-[#667085]">
+                <div className="pt-3 border-t border-[var(--ink-200)]">
+                  <p className="text-xs text-[var(--ink-500)]">
                     Your intake conversation was recorded and submitted. A doctor will review your clinical history during your consultation.
                   </p>
                 </div>
@@ -410,7 +410,7 @@ export default function PatientIntakePage() {
                   else router.push("/patient/reports");
                 }}
                 size="lg"
-                className="w-full sm:w-auto bg-[#155EEF] hover:bg-[#124bbf] font-semibold"
+                className="w-full sm:w-auto font-semibold cursor-pointer"
               >
                 <ClipboardList className="w-4 h-4 mr-2" />
                 View Structured Pre-Consultation Report
@@ -419,7 +419,7 @@ export default function PatientIntakePage() {
                 onClick={() => { intake.reset(); router.push("/patient/dashboard"); }}
                 variant="secondary"
                 size="lg"
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto cursor-pointer"
               >
                 <ArrowLeft className="w-4 h-4 mr-1.5" /> Return to Dashboard
               </Button>
@@ -435,11 +435,11 @@ export default function PatientIntakePage() {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#172033] flex items-center gap-2">
-            <Stethoscope className="w-6 h-6 text-[#155EEF]" />
+          <h1 className="text-2xl font-bold text-[var(--ink-900)] flex items-center gap-2">
+            <Stethoscope className="w-6 h-6 text-[var(--clinical)]" />
             Pre-Consultation
           </h1>
-          <p className="text-[#667085] mt-1 text-sm">
+          <p className="text-[var(--ink-500)] mt-1 text-sm">
             Begin your clinical intake. Answer questions about your symptoms and medical history by voice or text.
           </p>
         </div>
@@ -447,20 +447,20 @@ export default function PatientIntakePage() {
         <Card>
           <CardContent className="py-6">
             {isLoadingEncounters ? (
-              <div className="flex items-center gap-3 text-[#667085] py-8 justify-center">
-                <Spinner className="text-[#155EEF]" /> Loading your consultations…
+              <div className="flex items-center gap-3 text-[var(--ink-500)] py-8 justify-center">
+                <Spinner /> Loading your consultations…
               </div>
             ) : allActiveEncounters.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-[#667085] mb-4">No active consultation found.</p>
-                <Button onClick={() => router.push("/patient/dashboard")} variant="secondary">
+                <p className="text-[var(--ink-500)] mb-4">No active consultation found.</p>
+                <Button onClick={() => router.push("/patient/dashboard")} variant="secondary" className="cursor-pointer">
                   Go to Dashboard to Start One
                 </Button>
               </div>
             ) : encounters.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-[#667085] mb-4">All your active consultations have been submitted for doctor review.</p>
-                <Button onClick={() => router.push("/patient/dashboard")} variant="secondary">
+                <p className="text-[var(--ink-500)] mb-4">All your active consultations have been submitted for doctor review.</p>
+                <Button onClick={() => router.push("/patient/dashboard")} variant="secondary" className="cursor-pointer">
                   Return to Dashboard
                 </Button>
               </div>
@@ -468,12 +468,12 @@ export default function PatientIntakePage() {
               <div className="space-y-5">
                 {/* Encounter selector */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="encounter" className="text-sm font-medium text-[#172033]">Consultation</label>
+                  <label htmlFor="encounter" className="text-sm font-medium text-[var(--ink-900)]">Consultation</label>
                   <select
                     id="encounter"
                     value={selectedEncounter}
                     onChange={(e) => setSelectedEncounter(e.target.value)}
-                    className="h-12 w-full rounded-lg border border-[#E4E7EC] bg-white px-3 text-sm text-[#172033] focus:outline-none focus:ring-2 focus:ring-[#155EEF]"
+                    className="h-11 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
                   >
                     {encounters.map((enc) => (
                       <option key={enc.id} value={enc.id}>
@@ -485,12 +485,12 @@ export default function PatientIntakePage() {
 
                 {/* Schema selector */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="schema" className="text-sm font-medium text-[#172033]">Intake Type</label>
+                  <label htmlFor="schema" className="text-sm font-medium text-[var(--ink-900)]">Intake Type</label>
                   <select
                     id="schema"
                     value={selectedSchema}
                     onChange={(e) => setSelectedSchema(e.target.value)}
-                    className="h-12 w-full rounded-lg border border-[#E4E7EC] bg-white px-3 text-sm text-[#172033] focus:outline-none focus:ring-2 focus:ring-[#155EEF]"
+                    className="h-11 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
                   >
                     {SCHEMAS.map((s) => (
                       <option key={s.id} value={s.id}>{s.label}</option>
@@ -500,12 +500,12 @@ export default function PatientIntakePage() {
 
                 {/* Language selector */}
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="language" className="text-sm font-medium text-[#172033]">Language</label>
+                  <label htmlFor="language" className="text-sm font-medium text-[var(--ink-900)]">Language</label>
                   <select
                     id="language"
                     value={selectedLanguage}
                     onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="h-12 w-full rounded-lg border border-[#E4E7EC] bg-white px-3 text-sm text-[#172033] focus:outline-none focus:ring-2 focus:ring-[#155EEF]"
+                    className="h-11 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
                   >
                     {LANGUAGES.map((l) => (
                       <option key={l.value} value={l.value}>{l.label}</option>
@@ -514,7 +514,7 @@ export default function PatientIntakePage() {
                 </div>
 
                 {setupError && (
-                  <div className="flex items-start gap-2 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-[#D92D20]">
+                  <div className="flex items-start gap-2 p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-sm text-[var(--status-error-fg)]">
                     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                     <span>{setupError}</span>
                   </div>
@@ -522,7 +522,7 @@ export default function PatientIntakePage() {
 
                 <Button
                   size="lg"
-                  className="w-full"
+                  className="w-full cursor-pointer"
                   onClick={handleStartSession}
                   isLoading={intake.isLoading}
                 >
@@ -542,16 +542,16 @@ export default function PatientIntakePage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#172033] flex items-center gap-2">
-            <Stethoscope className="w-5 h-5 text-[#155EEF]" />
+          <h1 className="text-xl font-bold text-[var(--ink-900)] flex items-center gap-2">
+            <Stethoscope className="w-5 h-5 text-[var(--clinical)]" />
             Pre-Consultation
           </h1>
-          <p className="text-xs text-[#667085] mt-0.5">
+          <p className="text-xs text-[var(--ink-500)] mt-0.5">
             {intake.pathwayComplete ? "All questions completed" : `Question ${intake.turnNumber + 1} in progress`}
           </p>
         </div>
         {intake.turnNumber > 0 && (
-          <span className="text-xs text-[#667085] bg-[#F7F9FC] px-3 py-1.5 rounded-lg border border-[#E4E7EC]">
+          <span className="text-xs text-[var(--ink-500)] bg-[var(--bg-surface-2)] px-3 py-1.5 rounded-md border border-[var(--ink-200)]">
             {intake.turnNumber} answered
           </span>
         )}
@@ -560,13 +560,13 @@ export default function PatientIntakePage() {
       {/* Progress bar — based on turn count, capped proportionally */}
       {intake.turnNumber > 0 && (
         <div className="mb-6">
-          <div className="h-2 bg-[#E4E7EC] rounded-full overflow-hidden">
+          <div className="h-2 bg-[var(--ink-200)] rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#155EEF] rounded-full transition-all duration-500"
+              className="h-full bg-[var(--clinical)] rounded-full transition-all duration-500"
               style={{ width: intake.pathwayComplete ? "100%" : `${Math.min(90, intake.turnNumber * 18)}%` }}
             />
           </div>
-          <p className="text-xs text-[#667085] mt-1.5">
+          <p className="text-xs text-[var(--ink-500)] mt-1.5">
             {intake.pathwayComplete ? "History complete — ready to submit" : "History in progress"}
           </p>
         </div>
@@ -580,11 +580,11 @@ export default function PatientIntakePage() {
         {/* Current question */}
         {intake.currentQuestion && !intake.pathwayComplete && (
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Stethoscope className="w-4 h-4 text-[#155EEF]" />
+            <div className="flex-shrink-0 w-8 h-8 rounded-md bg-[var(--clinical-light)] border border-[var(--clinical-mid)] flex items-center justify-center">
+              <Stethoscope className="w-4 h-4 text-[var(--clinical)]" />
             </div>
-            <div className="flex-1 bg-white border border-[#155EEF] border-opacity-30 rounded-xl px-4 py-3.5 shadow-sm">
-              <p className="text-sm font-semibold text-[#172033]">{intake.currentQuestion}</p>
+            <div className="flex-1 bg-[var(--bg-surface)] border border-[var(--clinical-mid)] rounded-lg px-4 py-3.5 shadow-[var(--shadow-xs)]">
+              <p className="text-sm font-semibold text-[var(--ink-900)]">{intake.currentQuestion}</p>
             </div>
           </div>
         )}
@@ -599,11 +599,11 @@ export default function PatientIntakePage() {
 
       {/* General error message */}
       {intake.error && (
-        <div className="mb-4 flex items-start gap-2 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-[#D92D20]">
+        <div className="mb-4 flex items-start gap-2 p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-sm text-[var(--status-error-fg)]">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <span>{intake.error}</span>
-            <button onClick={() => intake.setError(null)} className="ml-2 underline text-xs font-medium">
+            <button onClick={() => intake.setError(null)} className="ml-2 underline text-xs font-medium cursor-pointer">
               Dismiss
             </button>
           </div>
@@ -612,14 +612,14 @@ export default function PatientIntakePage() {
 
       {/* Real-time backend transcript feedback banner */}
       {intake.lastTranscript && !intake.pathwayComplete && (
-        <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs text-[#172033] flex items-start justify-between gap-2 animate-fadeIn">
+        <div className="mb-4 p-3 rounded-lg bg-[var(--clinical-light)]/50 border border-[var(--clinical-mid)] text-xs text-[var(--ink-900)] flex items-start justify-between gap-2 animate-fadeIn">
           <div className="flex items-start gap-2">
-            <Mic className="w-4 h-4 text-[#155EEF] mt-0.5 flex-shrink-0" />
+            <Mic className="w-4 h-4 text-[var(--clinical)] mt-0.5 flex-shrink-0" />
             <div>
-              <span className="font-semibold text-[#155EEF]">Captured voice transcript: </span>
+              <span className="font-semibold text-[var(--clinical)]">Captured voice transcript: </span>
               <span className="italic font-medium">&ldquo;{intake.lastTranscript}&rdquo;</span>
               {intake.lastDetectedLanguage && (
-                <span className="ml-2 text-[#667085] bg-white px-2 py-0.5 rounded border border-[#E4E7EC] font-normal">
+                <span className="ml-2 text-[var(--ink-500)] bg-[var(--bg-surface)] px-2 py-0.5 rounded border border-[var(--ink-200)] font-normal">
                   Language: {intake.lastDetectedLanguage}
                 </span>
               )}
@@ -628,7 +628,7 @@ export default function PatientIntakePage() {
           <button
             type="button"
             onClick={() => intake.clearLastTranscript()}
-            className="text-[#667085] hover:text-[#172033] p-1"
+            className="text-[var(--ink-500)] hover:text-[var(--ink-900)] p-1 cursor-pointer"
             aria-label="Dismiss transcript preview"
           >
             <X className="w-3.5 h-3.5" />
@@ -638,19 +638,19 @@ export default function PatientIntakePage() {
 
       {/* Answer input or completion actions */}
       {intake.pathwayComplete ? (
-        <Card className="border-[#0F9D8A] border-opacity-30">
+        <Card className="border-[var(--clinical-mid)]">
           <CardContent className="py-6">
             <div className="text-center">
-              <CheckCircle2 className="w-9 h-9 text-[#0F9D8A] mx-auto mb-3" />
-              <h2 className="text-lg font-semibold text-[#172033] mb-1">All Questions Completed</h2>
-              <p className="text-sm text-[#667085] mb-6">
+              <CheckCircle2 className="w-9 h-9 text-[var(--status-success-fg)] mx-auto mb-3" />
+              <h2 className="text-lg font-semibold text-[var(--ink-900)] mb-1">All Questions Completed</h2>
+              <p className="text-sm text-[var(--ink-500)] mb-6">
                 Your history has been captured and structured. Submit it for doctor review.
               </p>
               <Button
                 size="lg"
                 onClick={handleSubmitIntake}
                 isLoading={isSubmitting || intake.phase === "submitting"}
-                className="w-full sm:w-auto px-10"
+                className="w-full sm:w-auto px-10 cursor-pointer"
               >
                 Submit for Doctor Review
               </Button>
@@ -660,14 +660,14 @@ export default function PatientIntakePage() {
       ) : intake.currentQuestion ? (
         <div className="space-y-4">
           {/* Method Selector */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-[#F2F4F7] rounded-xl border border-[#E4E7EC]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 bg-[var(--bg-surface-2)] rounded-lg border border-[var(--ink-200)]">
             <button
               type="button"
               onClick={() => setInputMode("carevoice_cloud")}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 inputMode === "carevoice_cloud"
-                  ? "bg-white text-[#155EEF] shadow-xs"
-                  : "text-[#667085] hover:text-[#172033]"
+                  ? "bg-[var(--bg-surface)] text-[var(--clinical)] shadow-[var(--shadow-xs)]"
+                  : "text-[var(--ink-500)] hover:text-[var(--ink-900)]"
               }`}
               aria-label="Switch to CareVoice AI voice"
             >
@@ -677,10 +677,10 @@ export default function PatientIntakePage() {
             <button
               type="button"
               onClick={() => setInputMode("turn_voice")}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 inputMode === "turn_voice"
-                  ? "bg-white text-[#172033] shadow-xs"
-                  : "text-[#667085] hover:text-[#172033]"
+                  ? "bg-[var(--bg-surface)] text-[var(--ink-900)] shadow-[var(--shadow-xs)]"
+                  : "text-[var(--ink-500)] hover:text-[var(--ink-900)]"
               }`}
               aria-label="Switch to Push-to-Talk voice intake"
             >
@@ -690,10 +690,10 @@ export default function PatientIntakePage() {
             <button
               type="button"
               onClick={() => setInputMode("text")}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 inputMode === "text"
-                  ? "bg-white text-[#172033] shadow-xs"
-                  : "text-[#667085] hover:text-[#172033]"
+                  ? "bg-[var(--bg-surface)] text-[var(--ink-900)] shadow-[var(--shadow-xs)]"
+                  : "text-[var(--ink-500)] hover:text-[var(--ink-900)]"
               }`}
               aria-label="Switch to typed text answer"
             >
@@ -703,10 +703,10 @@ export default function PatientIntakePage() {
             <button
               type="button"
               onClick={() => setInputMode("carevoice_local")}
-              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 inputMode === "carevoice_local"
-                  ? "bg-white text-[#155EEF] shadow-xs"
-                  : "text-[#667085] hover:text-[#172033]"
+                  ? "bg-[var(--bg-surface)] text-[var(--clinical)] shadow-[var(--shadow-xs)]"
+                  : "text-[var(--ink-500)] hover:text-[var(--ink-900)]"
               }`}
               aria-label="Switch to CareVoice local self-hosted fallback"
             >
@@ -733,7 +733,7 @@ export default function PatientIntakePage() {
                 <button
                   type="button"
                   onClick={() => setInputMode("text")}
-                  className="text-xs text-[#667085] hover:text-[#155EEF] hover:underline"
+                  className="text-xs text-[var(--ink-500)] hover:text-[var(--clinical)] hover:underline cursor-pointer"
                 >
                   Prefer to type your answer instead? Switch to text intake
                 </button>
@@ -743,7 +743,7 @@ export default function PatientIntakePage() {
 
           {/* Mode 2: Push-to-Talk Voice Turn */}
           {inputMode === "turn_voice" && (
-            <div className="bg-white border border-[#E4E7EC] rounded-2xl p-4 shadow-sm space-y-4">
+            <div className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-4 shadow-[var(--shadow-sm)] space-y-4">
               <div className="w-full">
                 <VoiceRecorder
                   onRecorded={handleVoiceRecorded}
@@ -753,11 +753,11 @@ export default function PatientIntakePage() {
                   onClearError={() => intake.setVoiceError(null)}
                 />
               </div>
-              <div className="text-center pt-1 border-t border-[#F2F4F7]">
+              <div className="text-center pt-1 border-t border-[var(--ink-200)]">
                 <button
                   type="button"
                   onClick={() => setInputMode("text")}
-                  className="text-xs text-[#667085] hover:text-[#155EEF] hover:underline"
+                  className="text-xs text-[var(--ink-500)] hover:text-[var(--clinical)] hover:underline cursor-pointer"
                 >
                   Or type your response
                 </button>
@@ -767,7 +767,7 @@ export default function PatientIntakePage() {
 
           {/* Mode 3: Text Input */}
           {inputMode === "text" && (
-            <div className="bg-white border border-[#E4E7EC] rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-4 shadow-[var(--shadow-sm)] space-y-3">
               <form onSubmit={handleSubmitAnswer} className="flex gap-2.5 items-end">
                 <div className="flex-1">
                   <label htmlFor="answer-input" className="sr-only">
@@ -779,7 +779,7 @@ export default function PatientIntakePage() {
                     value={answerText}
                     onChange={(e) => setAnswerText(e.target.value)}
                     placeholder="Type your medical answer here… (e.g. 3 days, mild, worse when walking)"
-                    className="w-full resize-none rounded-xl border border-[#E4E7EC] bg-white p-3 text-sm text-[#172033] placeholder-[#667085] focus:outline-none focus:ring-2 focus:ring-[#155EEF] transition"
+                    className="w-full resize-none rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] p-3 text-sm text-[var(--ink-900)] placeholder-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition"
                     disabled={isSubmitting || intake.isLoading}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
@@ -794,14 +794,14 @@ export default function PatientIntakePage() {
                   size="md"
                   disabled={!answerText.trim() || isSubmitting || intake.isLoading}
                   isLoading={isSubmitting}
-                  className="h-11 px-4 flex-shrink-0"
+                  className="h-11 px-4 flex-shrink-0 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
               </form>
-              <p className="text-[11px] text-[#667085]">
-                Press <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Enter</kbd> to send,{" "}
-                <kbd className="px-1 py-0.5 bg-gray-100 rounded text-[10px] font-mono">Shift+Enter</kbd> for a new line
+              <p className="text-[11px] text-[var(--ink-500)]">
+                Press <kbd className="px-1 py-0.5 bg-[var(--bg-surface-2)] border border-[var(--ink-200)] rounded text-[10px] font-mono text-[var(--ink-700)]">Enter</kbd> to send,{" "}
+                <kbd className="px-1 py-0.5 bg-[var(--bg-surface-2)] border border-[var(--ink-200)] rounded text-[10px] font-mono text-[var(--ink-700)]">Shift+Enter</kbd> for a new line
               </p>
             </div>
           )}
@@ -833,7 +833,7 @@ export default function PatientIntakePage() {
                 <button
                   type="button"
                   onClick={() => setInputMode("text")}
-                  className="text-xs text-[#667085] hover:text-[#155EEF] hover:underline"
+                  className="text-xs text-[var(--ink-500)] hover:text-[var(--clinical)] hover:underline cursor-pointer"
                 >
                   Prefer to type your answer instead? Switch to text intake
                 </button>

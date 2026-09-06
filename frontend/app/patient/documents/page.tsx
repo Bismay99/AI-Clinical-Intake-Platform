@@ -184,35 +184,35 @@ export default function PatientDocumentsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="pb-3 border-b border-[#E4E7EC]">
-        <h1 className="text-2xl font-bold text-[#172033] flex items-center gap-2">
-          <FileText className="w-6 h-6 text-[#155EEF]" />
+      <div className="pb-3 border-b border-[var(--ink-200)]">
+        <h1 className="text-2xl font-bold text-[var(--ink-900)] flex items-center gap-2">
+          <FileText className="w-6 h-6 text-[var(--clinical)]" />
           <span>Medical Documents</span>
         </h1>
-        <p className="text-sm text-[#667085] mt-1">
+        <p className="text-sm text-[var(--ink-500)] mt-1">
           Upload prescriptions, lab investigations, and hospital records for AI clinical extraction and doctor review.
         </p>
       </div>
 
       {/* ── Section 1: Upload Document Card ── */}
-      <Card className="border-[#E4E7EC] shadow-xs">
-        <CardHeader className="pb-3 border-b border-[#E4E7EC]">
-          <CardTitle className="text-sm font-bold text-[#172033] flex items-center gap-2">
-            <Upload className="w-4 h-4 text-[#155EEF]" />
+      <Card>
+        <CardHeader className="pb-3 border-b border-[var(--ink-200)]">
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="w-4 h-4 text-[var(--clinical)]" />
             <span>Upload Clinical Document</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-5">
           <form onSubmit={handleUpload} className="space-y-4">
             {uploadSuccess && (
-              <div className="p-3.5 rounded-xl border border-green-200 bg-green-50 text-xs text-[#12B76A] flex items-center gap-2">
+              <div className="p-3 rounded-md border border-[var(--status-success-bd)] bg-[var(--status-success-bg)] text-xs text-[var(--status-success-fg)] flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 <span>{uploadSuccess}</span>
               </div>
             )}
 
             {uploadError && (
-              <div className="p-3.5 rounded-xl border border-red-200 bg-red-50 text-xs text-[#D92D20] flex items-center gap-2">
+              <div className="p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-xs text-[var(--status-error-fg)] flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{uploadError}</span>
               </div>
@@ -222,14 +222,14 @@ export default function PatientDocumentsPage() {
               {/* Encounter selector */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-[#667085]">
+                  <label className="text-xs font-semibold text-[var(--ink-700)]">
                     Associated Consultation / Encounter
                   </label>
                   <button
                     type="button"
                     onClick={() => createEncounterMutation.mutate()}
                     disabled={createEncounterMutation.isPending}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#155EEF] hover:text-[#004EEB] hover:underline cursor-pointer"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--clinical)] hover:underline cursor-pointer disabled:opacity-50"
                   >
                     <Plus className="w-3 h-3" />
                     <span>{createEncounterMutation.isPending ? "Creating..." : "New Consultation"}</span>
@@ -237,7 +237,7 @@ export default function PatientDocumentsPage() {
                 </div>
 
                 {encounters.length === 0 ? (
-                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 flex items-center justify-between">
+                  <div className="p-3 bg-[var(--status-pending-bg)] rounded-md border border-[var(--status-pending-bd)] text-xs text-[var(--status-pending-fg)] flex items-center justify-between">
                     <span>No consultation active.</span>
                     <button
                       type="button"
@@ -251,7 +251,7 @@ export default function PatientDocumentsPage() {
                   <select
                     value={activeEncounterId}
                     onChange={(e) => setSelectedEncounterId(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-[#E4E7EC] bg-white text-[#172033] focus:outline-none focus:border-[#155EEF]"
+                    className="w-full text-xs p-2.5 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
                   >
                     {encounters.map((enc) => {
                       const isDone = enc.queue_status === "completed";
@@ -265,12 +265,12 @@ export default function PatientDocumentsPage() {
                 )}
 
                 {isEncounterCompleted && (
-                  <div className="mt-2 p-2.5 rounded-lg border border-amber-200 bg-amber-50 text-[11px] text-amber-800 flex items-center justify-between">
+                  <div className="mt-2 p-2.5 rounded-md border border-[var(--status-pending-bd)] bg-[var(--status-pending-bg)] text-[11px] text-[var(--status-pending-fg)] flex items-center justify-between">
                     <span>This consultation is completed and finalized.</span>
                     <button
                       type="button"
                       onClick={() => createEncounterMutation.mutate()}
-                      className="text-[#155EEF] font-bold underline ml-1 hover:text-[#004EEB] cursor-pointer"
+                      className="text-[var(--clinical)] font-bold underline ml-1 hover:opacity-80 cursor-pointer"
                     >
                       Start New Consultation
                     </button>
@@ -280,13 +280,13 @@ export default function PatientDocumentsPage() {
 
               {/* Document type selector */}
               <div>
-                <label className="text-xs font-semibold text-[#667085] block mb-1.5">
+                <label className="text-xs font-semibold text-[var(--ink-700)] block mb-1.5">
                   Document Type
                 </label>
                 <select
                   value={selectedDocType}
                   onChange={(e) => setSelectedDocType(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-[#E4E7EC] bg-white text-[#172033] focus:outline-none focus:border-[#155EEF]"
+                  className="w-full text-xs p-2.5 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
                 >
                   {DOC_TYPES.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -297,9 +297,9 @@ export default function PatientDocumentsPage() {
               </div>
             </div>
 
-            {/* File drop / picker */}
+            {/* File picker */}
             <div>
-              <label className="text-xs font-semibold text-[#667085] block mb-1.5">
+              <label className="text-xs font-semibold text-[var(--ink-700)] block mb-1.5">
                 Select File (PDF, PNG, JPG)
               </label>
               <div className="flex items-center gap-3">
@@ -309,17 +309,17 @@ export default function PatientDocumentsPage() {
                   accept="application/pdf,image/png,image/jpeg"
                   disabled={isEncounterCompleted}
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="text-xs text-[#667085] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#155EEF] hover:file:bg-blue-100 cursor-pointer disabled:opacity-50"
+                  className="text-xs text-[var(--ink-500)] file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[var(--clinical-light)] file:text-[var(--clinical)] hover:file:bg-[var(--clinical-mid)] cursor-pointer disabled:opacity-50"
                 />
                 <Button
                   type="submit"
                   size="sm"
                   disabled={uploadMutation.isPending || !selectedFile || !activeEncounterId || isEncounterCompleted}
                   isLoading={uploadMutation.isPending}
-                  className="text-xs font-semibold px-5 cursor-pointer"
+                  className="cursor-pointer"
                 >
-                  <FileUp className="w-3.5 h-3.5 mr-1.5" />
-                  <span>Upload & Extract</span>
+                  <FileUp className="w-3.5 h-3.5" />
+                  <span>Upload &amp; Extract</span>
                 </Button>
               </div>
             </div>
@@ -327,29 +327,29 @@ export default function PatientDocumentsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Section 2: Uploaded Documents List with Live Processing Badges & Provenance ── */}
-      <Card className="border-[#E4E7EC] shadow-xs">
-        <CardHeader className="pb-3 border-b border-[#E4E7EC]">
-          <CardTitle className="text-sm font-bold text-[#172033] flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <FolderOpen className="w-4 h-4 text-[#0F9D8A]" />
+      {/* ── Section 2: Uploaded Documents List ── */}
+      <Card>
+        <CardHeader className="pb-3 border-b border-[var(--ink-200)]">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-[var(--clinical)]" />
               <span>Clinical Documents ({documents.length})</span>
-            </span>
-            <span className="text-xs text-[#667085] font-normal">
+            </CardTitle>
+            <span className="text-xs text-[var(--ink-500)]">
               Stored securely with full entity provenance
             </span>
-          </CardTitle>
+          </div>
         </CardHeader>
         <CardContent className="pt-4">
           {isLoadingDocs ? (
-            <div className="flex items-center gap-2 py-8 text-xs text-[#667085] justify-center">
-              <Spinner className="text-[#155EEF]" /> Loading documents…
+            <div className="flex items-center gap-2 py-8 text-xs text-[var(--ink-500)] justify-center">
+              <Spinner /> Loading documents…
             </div>
           ) : documents.length === 0 ? (
             <div className="text-center py-10 max-w-sm mx-auto space-y-2">
-              <FileText className="w-10 h-10 text-[#667085]/40 mx-auto" />
-              <p className="text-sm font-semibold text-[#172033]">No documents uploaded yet</p>
-              <p className="text-xs text-[#667085]">
+              <FileText className="w-10 h-10 text-[var(--ink-400)] mx-auto" />
+              <p className="text-sm font-semibold text-[var(--ink-900)]">No documents uploaded yet</p>
+              <p className="text-xs text-[var(--ink-500)]">
                 Upload medical prescriptions or lab reports above to automatically extract clinical findings for your doctor.
               </p>
             </div>
@@ -366,27 +366,27 @@ export default function PatientDocumentsPage() {
                 return (
                   <div
                     key={doc.id}
-                    className="border border-[#E4E7EC] rounded-xl overflow-hidden bg-white hover:border-gray-300 transition-colors"
+                    className="border border-[var(--ink-200)] rounded-lg overflow-hidden bg-[var(--bg-surface)] hover:border-[var(--ink-400)] transition-colors"
                   >
                     {/* Main Row */}
-                    <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
+                    <div className="px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#155EEF] flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-5 h-5" />
+                        <div className="w-9 h-9 rounded-md bg-[var(--clinical-light)] text-[var(--clinical)] flex items-center justify-center flex-shrink-0 border border-[var(--clinical-mid)]">
+                          <FileText className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[#172033] truncate">
+                          <p className="text-sm font-semibold text-[var(--ink-900)] truncate">
                             {doc.original_filename || doc.filename || "Clinical Document"}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-[#667085] mt-0.5 flex-wrap">
+                          <div className="flex items-center gap-2 text-xs text-[var(--ink-500)] mt-0.5 flex-wrap">
                             <span className="capitalize font-medium">
                               {doc.document_type.replace(/_/g, " ")}
                             </span>
-                            <span>•</span>
+                            <span>·</span>
                             <span>{doc.upload_timestamp}</span>
                             {doc.file_size && (
                               <>
-                                <span>•</span>
+                                <span>·</span>
                                 <span>{formatFileSize(doc.file_size)}</span>
                               </>
                             )}
@@ -394,49 +394,50 @@ export default function PatientDocumentsPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2.5 flex-shrink-0">
-                        {/* Dynamic Status Badge */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Dynamic Processing Status Badge */}
                         <span
-                          className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                          className={`inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                             isProcessed
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              ? "bg-[var(--status-success-bg)] text-[var(--status-success-fg)] border-[var(--status-success-bd)]"
                               : isFailed
-                              ? "bg-red-50 text-red-700 border-red-200"
-                              : "bg-blue-50 text-blue-700 border-blue-200 animate-pulse"
+                              ? "bg-[var(--status-error-bg)] text-[var(--status-error-fg)] border-[var(--status-error-bd)]"
+                              : "bg-[var(--status-info-bg)] text-[var(--status-info-fg)] border-[var(--status-info-bd)] animate-pulse"
                           }`}
                         >
                           {isProcessing ? (
-                            <Spinner className="w-3 h-3 text-blue-600" />
+                            <Spinner />
                           ) : isFailed ? (
-                            <AlertCircle className="w-3 h-3 text-red-600" />
+                            <AlertCircle className="w-3 h-3" />
                           ) : (
-                            <FileCheck2 className="w-3 h-3 text-emerald-600" />
+                            <FileCheck2 className="w-3 h-3" />
                           )}
                           <span className="capitalize">
                             {isProcessing ? "AI Extracting..." : (doc.processing_status || "Processed")}
                           </span>
                         </span>
 
-                        {/* Entities Extracted Badge */}
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <Sparkles className="w-3 h-3 text-emerald-600" />
+                        {/* Entities Badge */}
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[var(--entity-verified-bg)] text-[var(--entity-verified-fg)] border border-[var(--entity-verified-bd)]">
+                          <Sparkles className="w-3 h-3" />
                           <span>{entityCount} entities</span>
                         </span>
 
                         {/* Expand Button */}
                         <button
                           onClick={() => toggleExpand(doc.id)}
-                          className="p-1.5 rounded-lg border border-[#E4E7EC] hover:bg-gray-50 text-[#667085] transition-colors ml-1 cursor-pointer"
+                          className="p-1.5 rounded-md border border-[var(--ink-200)] hover:bg-[var(--ink-100)] text-[var(--ink-500)] transition-colors cursor-pointer"
                           title={isExpanded ? "Collapse extracted fields" : "View extracted fields"}
+                          aria-expanded={isExpanded}
                         >
-                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
                       </div>
                     </div>
 
                     {/* Extraction Error Notice if failed */}
                     {isFailed && doc.processing_error && (
-                      <div className="mx-4 mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+                      <div className="mx-4 mb-3 p-2.5 rounded-md bg-[var(--status-error-bg)] border border-[var(--status-error-bd)] text-xs text-[var(--status-error-fg)] flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 flex-shrink-0" />
                         <span>{doc.processing_error}</span>
                       </div>
@@ -444,42 +445,42 @@ export default function PatientDocumentsPage() {
 
                     {/* Expandable Entity Details */}
                     {isExpanded && (
-                      <div className="p-4 bg-[#F7F9FC] border-t border-[#E4E7EC] space-y-3">
+                      <div className="px-4 py-3 bg-[var(--bg-surface-2)] border-t border-[var(--ink-200)] space-y-3">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-xs font-bold text-[#172033] uppercase tracking-wider flex items-center gap-1.5">
-                            <ShieldCheck className="w-3.5 h-3.5 text-[#155EEF]" />
-                            <span>Extracted Clinical Facts & Provenance</span>
+                          <h4 className="text-[10px] font-semibold text-[var(--ink-500)] uppercase tracking-wider flex items-center gap-1.5">
+                            <ShieldCheck className="w-3.5 h-3.5 text-[var(--clinical)]" />
+                            <span>Extracted Clinical Facts &amp; Provenance</span>
                           </h4>
-                          <span className="text-[11px] text-[#667085]">
+                          <span className="text-[10px] text-[var(--ink-500)]">
                             {entityCount} facts captured from this document
                           </span>
                         </div>
 
                         {doc.extracted_entities && doc.extracted_entities.length > 0 ? (
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             {doc.extracted_entities.map((ent, idx) => (
                               <div
                                 key={idx}
-                                className="p-3 bg-white rounded-lg border border-[#E4E7EC] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                                className="px-3 py-2 bg-[var(--bg-surface)] rounded-md border border-[var(--ink-200)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
                               >
                                 <div>
                                   <div className="flex items-center gap-2">
-                                    <span className="font-bold text-[#172033]">{ent.label}</span>
-                                    <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
+                                    <span className="font-semibold text-[var(--ink-800)]">{ent.label}</span>
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--ink-100)] text-[var(--ink-600)]">
                                       {ent.field_name}
                                     </span>
                                   </div>
-                                  <p className="text-sm font-semibold text-[#155EEF] mt-1">{ent.value}</p>
+                                  <p className="text-sm font-semibold text-[var(--clinical)] mt-0.5">{ent.value}</p>
                                 </div>
 
-                                <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                                   {ent.confidence != null && (
-                                    <span className="text-[11px] text-[#667085]">
-                                      Conf: {(ent.confidence * 100).toFixed(0)}%
+                                    <span className="text-[10px] text-[var(--ink-500)]">
+                                      AI confidence: {(ent.confidence * 100).toFixed(0)}%
                                     </span>
                                   )}
                                   {ent.evidence && ent.evidence.length > 0 && (
-                                    <div className="flex items-center gap-1 text-[11px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                                    <div className="inline-flex items-center gap-1 text-[10px] bg-[var(--clinical-light)] text-[var(--clinical)] px-2 py-0.5 rounded-md border border-[var(--clinical-mid)]">
                                       <HardDrive className="w-3 h-3" />
                                       <span>Evidence match</span>
                                     </div>
@@ -489,7 +490,7 @@ export default function PatientDocumentsPage() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-xs text-[#667085] py-2">
+                          <p className="text-xs text-[var(--ink-500)] py-2">
                             {isProcessing
                               ? "AI clinical OCR and entity extraction is currently analyzing this file. Extracted entities will populate shortly."
                               : "No clinical entities extracted for this document."}

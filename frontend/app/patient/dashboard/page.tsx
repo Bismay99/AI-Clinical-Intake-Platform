@@ -123,70 +123,70 @@ export default function PatientDashboard() {
   if (isLoadingProfile) {
     return (
       <div className="space-y-8 animate-pulse">
-        <div className="h-14 bg-gray-200 rounded-xl w-1/3" />
-        <div className="h-44 bg-gray-200 rounded-2xl w-full" />
+        <div className="h-14 bg-[var(--ink-200)] rounded-lg w-1/3" />
+        <div className="h-44 bg-[var(--ink-200)] rounded-lg w-full" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="h-24 bg-gray-200 rounded-xl" />
-          <div className="h-24 bg-gray-200 rounded-xl" />
-          <div className="h-24 bg-gray-200 rounded-xl" />
+          <div className="h-24 bg-[var(--ink-200)] rounded-lg" />
+          <div className="h-24 bg-[var(--ink-200)] rounded-lg" />
+          <div className="h-24 bg-[var(--ink-200)] rounded-lg" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* ── A. WELCOME HEADER ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#E4E7EC]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--ink-200)]">
         <div>
-          <h1 className="text-2xl font-bold text-[#172033] tracking-tight">
+          <h1 className="text-2xl font-bold text-[var(--ink-900)] tracking-tight">
             {getGreeting(profile?.full_name)}
           </h1>
-          <p className="text-sm text-[#667085] mt-1">
+          <p className="text-sm text-[var(--ink-500)] mt-1">
             Let&apos;s prepare your health information before your doctor consultation.
           </p>
         </div>
         {profile?.id && (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-[#E4E7EC] text-xs text-[#667085] shadow-2xs">
-            <span className="font-medium text-[#172033]">Patient UID:</span>
-            <span className="font-mono text-[#155EEF] font-semibold">
-              {profile.id.slice(0, 8)}...{profile.id.slice(-4)}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--bg-surface)] border border-[var(--ink-200)] text-xs text-[var(--ink-500)] shadow-[var(--shadow-xs)]">
+            <span className="font-medium text-[var(--ink-700)]">Patient UID:</span>
+            <span className="font-mono text-[var(--clinical)] font-semibold">
+              {profile.id.slice(0, 8)}…{profile.id.slice(-4)}
             </span>
           </div>
         )}
       </div>
 
       {error && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-sm text-[#D92D20]">
-          <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start gap-3 p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-sm text-[var(--status-error-fg)]">
+          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* ── B. CONSULTATION STATUS HERO CARD ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-white border border-[#E4E7EC] shadow-xs p-6 md:p-8">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-blue-50/60 rounded-full blur-2xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-lg bg-[var(--bg-surface)] border border-[var(--ink-200)] shadow-[var(--shadow-sm)] p-6 md:p-8">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-[var(--clinical-light)] rounded-full blur-2xl pointer-events-none opacity-60" />
 
         {primaryActiveEncounter?.queue_status === "intake_in_progress" ? (
           /* State 1: Intake in progress */
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#155EEF] border border-blue-200">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[var(--status-info-bg)] text-[var(--status-info-fg)] border border-[var(--status-info-bd)]">
                 <Clock className="w-3.5 h-3.5" />
                 <span>Pre-Consultation In Progress</span>
               </div>
-              <h2 className="text-xl font-bold text-[#172033]">
+              <h2 className="text-xl font-bold text-[var(--ink-900)]">
                 {primaryActiveEncounter.opd_department || "General OPD"} Consultation
               </h2>
-              <p className="text-sm text-[#667085] leading-relaxed">
+              <p className="text-sm text-[var(--ink-500)] leading-relaxed">
                 Your AI-guided intake has started. Complete speaking or answering questions so your physician has your full clinical summary before your visit.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Link href={`/patient/intake?encounter_id=${primaryActiveEncounter.id}`}>
-                <Button size="lg" className="w-full sm:w-auto text-xs font-semibold px-6 shadow-xs cursor-pointer">
+                <Button size="lg" className="w-full sm:w-auto cursor-pointer">
                   <span>Resume Intake</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
             </div>
@@ -195,22 +195,22 @@ export default function PatientDashboard() {
           /* State 2: Ready for review */
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border border-[var(--status-pending-bd)]">
                 <Clock className="w-3.5 h-3.5" />
                 <span>In Doctor Review Queue</span>
               </div>
-              <h2 className="text-xl font-bold text-[#172033]">
+              <h2 className="text-xl font-bold text-[var(--ink-900)]">
                 Intake Completed — Awaiting Doctor
               </h2>
-              <p className="text-sm text-[#667085] leading-relaxed">
+              <p className="text-sm text-[var(--ink-500)] leading-relaxed">
                 Your pre-consultation summary and uploaded evidence have been synthesized and submitted. Your physician is reviewing your chart.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Link href={`/patient/reports/${primaryActiveEncounter.id}`}>
-                <Button size="lg" variant="secondary" className="w-full sm:w-auto text-xs font-semibold px-6 cursor-pointer">
+                <Button size="lg" variant="secondary" className="w-full sm:w-auto cursor-pointer">
                   <span>View Submitted Summary</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
             </div>
@@ -219,22 +219,22 @@ export default function PatientDashboard() {
           /* State 3: Registered consultation ready to start */
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[var(--status-success-bg)] text-[var(--status-success-fg)] border border-[var(--status-success-bd)]">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Ready to Begin</span>
               </div>
-              <h2 className="text-xl font-bold text-[#172033]">
+              <h2 className="text-xl font-bold text-[var(--ink-900)]">
                 {primaryActiveEncounter.opd_department || "General OPD"} Consultation
               </h2>
-              <p className="text-sm text-[#667085] leading-relaxed">
+              <p className="text-sm text-[var(--ink-500)] leading-relaxed">
                 Start your adaptive AI intake session with CareVoice or upload your medical prescriptions to prepare your chart for the doctor.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Link href={`/patient/intake?encounter_id=${primaryActiveEncounter.id}`}>
-                <Button size="lg" className="w-full sm:w-auto text-xs font-semibold px-6 shadow-xs cursor-pointer">
+                <Button size="lg" className="w-full sm:w-auto cursor-pointer">
                   <span>Begin Pre-Consultation</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
             </div>
@@ -243,14 +243,14 @@ export default function PatientDashboard() {
           /* State 4: No active consultation */
           <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-[#667085]">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[var(--status-neutral-bg)] text-[var(--status-neutral-fg)] border border-[var(--status-neutral-bd)]">
                 <Calendar className="w-3.5 h-3.5" />
                 <span>Hospital Outpatient Intake</span>
               </div>
-              <h2 className="text-xl font-bold text-[#172033]">
+              <h2 className="text-xl font-bold text-[var(--ink-900)]">
                 Start a New Consultation
               </h2>
-              <p className="text-sm text-[#667085] leading-relaxed">
+              <p className="text-sm text-[var(--ink-500)] leading-relaxed">
                 Create a new consultation visit to begin your AI pre-consultation triage and share documents directly with hospital doctors.
               </p>
             </div>
@@ -259,14 +259,14 @@ export default function PatientDashboard() {
                 <Button
                   size="lg"
                   onClick={() => setShowDeptPicker(true)}
-                  className="text-xs font-semibold px-6 shadow-xs cursor-pointer"
+                  className="cursor-pointer"
                 >
-                  <Plus className="w-4 h-4 mr-1.5" />
+                  <Plus className="w-4 h-4" />
                   <span>Start Consultation</span>
                 </Button>
               ) : (
-                <div className="p-3 bg-white border border-[#E4E7EC] rounded-xl shadow-lg space-y-2 w-64">
-                  <p className="text-xs font-bold text-[#172033]">Select OPD Department:</p>
+                <div className="p-3 bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg shadow-[var(--shadow-md)] space-y-2 w-64">
+                  <p className="text-xs font-bold text-[var(--ink-900)]">Select OPD Department:</p>
                   <div className="space-y-1">
                     {DEPARTMENTS.map((dept) => (
                       <button
@@ -276,7 +276,7 @@ export default function PatientDashboard() {
                           createMutation.mutate(dept);
                         }}
                         disabled={createMutation.isPending}
-                        className="w-full text-left text-xs px-2.5 py-1.5 rounded-lg hover:bg-blue-50 hover:text-[#155EEF] transition-colors flex items-center justify-between cursor-pointer"
+                        className="w-full text-left text-xs px-2.5 py-1.5 rounded-md hover:bg-[var(--clinical-light)] hover:text-[var(--clinical)] transition-colors flex items-center justify-between cursor-pointer"
                       >
                         <span>{dept}</span>
                         <ChevronRight className="w-3 h-3 opacity-50" />
@@ -285,7 +285,7 @@ export default function PatientDashboard() {
                   </div>
                   <button
                     onClick={() => setShowDeptPicker(false)}
-                    className="w-full text-center text-[11px] text-[#667085] hover:underline pt-1 cursor-pointer"
+                    className="w-full text-center text-[11px] text-[var(--ink-500)] hover:underline pt-1 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -298,43 +298,43 @@ export default function PatientDashboard() {
 
       {/* ── C. METRIC TILES ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-[#E4E7EC] shadow-2xs">
+        <Card>
           <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-[#667085]">Total Consultations</p>
-              <p className="text-2xl font-bold text-[#172033] mt-1">
+              <p className="text-xs font-medium text-[var(--ink-500)]">Total Consultations</p>
+              <p className="text-2xl font-bold text-[var(--ink-900)] mt-1">
                 {isLoadingEncounters ? "…" : encounters.length}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#155EEF] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-md bg-[var(--clinical-light)] text-[var(--clinical)] flex items-center justify-center border border-[var(--clinical-mid)]">
               <Calendar className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-[#E4E7EC] shadow-2xs">
+        <Card>
           <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-[#667085]">Verified Reports</p>
-              <p className="text-2xl font-bold text-[#172033] mt-1">
+              <p className="text-xs font-medium text-[var(--ink-500)]">Verified Reports</p>
+              <p className="text-2xl font-bold text-[var(--ink-900)] mt-1">
                 {isLoadingReports ? "…" : reports.length}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#12B76A] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-md bg-[var(--status-success-bg)] text-[var(--status-success-fg)] flex items-center justify-center border border-[var(--status-success-bd)]">
               <ClipboardList className="w-5 h-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-[#E4E7EC] shadow-2xs">
+        <Card>
           <CardContent className="p-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-[#667085]">Clinical Documents</p>
-              <p className="text-2xl font-bold text-[#172033] mt-1">
+              <p className="text-xs font-medium text-[var(--ink-500)]">Clinical Documents</p>
+              <p className="text-2xl font-bold text-[var(--ink-900)] mt-1">
                 {isLoadingMetrics ? "…" : metrics?.documents_count ?? "0"}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0F9D8A] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-md bg-[var(--clinical-light)] text-[var(--clinical)] flex items-center justify-center border border-[var(--clinical-mid)]">
               <FolderOpen className="w-5 h-5" />
             </div>
           </CardContent>
@@ -342,48 +342,48 @@ export default function PatientDashboard() {
       </div>
 
       {/* ── D. ACTIVE CONSULTATIONS & DOCUMENTS SHORTCUT ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Active / Registered Consultations */}
-        <Card className="border-[#E4E7EC] shadow-2xs">
-          <CardHeader className="pb-3 border-b border-[#E4E7EC]">
-            <CardTitle className="text-sm font-bold text-[#172033] flex items-center gap-2">
-              <Activity className="w-4 h-4 text-[#155EEF]" />
+        <Card>
+          <CardHeader className="pb-3 border-b border-[var(--ink-200)]">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-[var(--clinical)]" />
               <span>Active Consultations</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
             {isLoadingEncounters ? (
-              <div className="flex items-center gap-2 py-4 text-xs text-[#667085]">
-                <Spinner className="text-[#155EEF]" /> Loading consultations…
+              <div className="flex items-center gap-2 py-4 text-xs text-[var(--ink-500)]">
+                <Spinner /> Loading consultations…
               </div>
             ) : activeEncounters.length === 0 ? (
-              <p className="text-xs text-[#667085] py-4">No ongoing consultations.</p>
+              <p className="text-xs text-[var(--ink-500)] py-4">No ongoing consultations.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {activeEncounters.map((enc) => (
                   <div
                     key={enc.id}
-                    className="p-3.5 rounded-xl border border-[#E4E7EC] bg-[#F7F9FC] flex items-center justify-between gap-3"
+                    className="p-3 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface-2)] flex items-center justify-between gap-3"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-[#172033]">
+                      <p className="text-sm font-semibold text-[var(--ink-900)]">
                         {enc.opd_department || "General OPD"}
                       </p>
-                      <p className="text-xs text-[#667085] mt-0.5">
-                        Status: <strong className="text-[#172033]">{enc.queue_status.replace(/_/g, " ")}</strong>
+                      <p className="text-xs text-[var(--ink-500)] mt-0.5">
+                        Status: <strong className="text-[var(--ink-700)] capitalize">{enc.queue_status.replace(/_/g, " ")}</strong>
                       </p>
                     </div>
                     {enc.queue_status === "ready_for_review" ? (
                       <Link
                         href={`/patient/reports/${enc.id}`}
-                        className="text-xs font-semibold text-[#155EEF] hover:underline"
+                        className="text-xs font-semibold text-[var(--clinical)] hover:underline whitespace-nowrap"
                       >
                         View Report →
                       </Link>
                     ) : (
                       <Link
                         href={`/patient/intake?encounter_id=${enc.id}`}
-                        className="text-xs font-semibold text-[#155EEF] hover:underline"
+                        className="text-xs font-semibold text-[var(--clinical)] hover:underline whitespace-nowrap"
                       >
                         Continue →
                       </Link>
@@ -396,24 +396,24 @@ export default function PatientDashboard() {
         </Card>
 
         {/* Clinical Document Upload Banner */}
-        <Card className="border-[#E4E7EC] shadow-2xs flex flex-col justify-between">
+        <Card className="flex flex-col justify-between">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold text-[#172033] flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#0F9D8A]" />
-              <span>Medical Documents & History</span>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[var(--clinical)]" />
+              <span>Medical Documents &amp; History</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-xs text-[#667085] leading-relaxed">
+            <p className="text-xs text-[var(--ink-500)] leading-relaxed">
               Upload prescriptions, laboratory reports, and previous discharge summaries. The PS47 engine automatically extracts structured clinical data directly for physician review.
             </p>
-            <div className="p-3 rounded-xl bg-[#F7F9FC] border border-[#E4E7EC] text-xs text-[#667085] space-y-1">
-              <p className="font-medium text-[#172033]">Supported formats:</p>
+            <div className="p-3 rounded-md bg-[var(--bg-surface-2)] border border-[var(--ink-200)] text-xs text-[var(--ink-500)] space-y-1">
+              <p className="font-medium text-[var(--ink-800)]">Supported formats:</p>
               <p>Prescriptions (Rx), Lab Reports, Discharge Summaries (PDF / Images)</p>
             </div>
             <Link
               href="/patient/documents"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F9D8A] hover:underline pt-1"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--clinical)] hover:underline pt-1"
             >
               <span>Manage documents</span>
               <ArrowRight className="w-3.5 h-3.5" />

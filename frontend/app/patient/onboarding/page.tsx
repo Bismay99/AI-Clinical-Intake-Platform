@@ -63,11 +63,11 @@ export default function PatientOnboarding() {
   return (
     <div className="max-w-lg mx-auto">
       <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-100 mb-4">
-          <UserPlus className="w-7 h-7 text-[#155EEF]" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-lg bg-[var(--clinical-light)] border border-[var(--clinical-mid)] mb-4">
+          <UserPlus className="w-7 h-7 text-[var(--clinical)]" />
         </div>
-        <h1 className="text-2xl font-bold text-[#172033]">Complete Your Profile</h1>
-        <p className="text-[#667085] mt-2 text-sm">
+        <h1 className="text-2xl font-bold text-[var(--ink-900)]">Complete Your Profile</h1>
+        <p className="text-[var(--ink-500)] mt-2 text-sm">
           We need a few details before you can start your pre-consultation intake.
         </p>
       </div>
@@ -82,8 +82,8 @@ export default function PatientOnboarding() {
             <Input id="dob" label="Date of Birth" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="gender" className="text-sm font-medium text-[#172033]">Gender</label>
-              <select id="gender" value={gender} onChange={(e) => setGender(e.target.value)} className="h-10 w-full rounded-lg border border-[#E4E7EC] bg-white px-3 text-sm text-[#172033] focus:outline-none focus:ring-2 focus:ring-[#155EEF]">
+              <label htmlFor="gender" className="text-sm font-medium text-[var(--ink-900)]">Gender</label>
+              <select id="gender" value={gender} onChange={(e) => setGender(e.target.value)} className="h-10 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors">
                 <option value="">Select gender</option>
                 {GENDERS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
               </select>
@@ -92,8 +92,8 @@ export default function PatientOnboarding() {
             <Input id="phone" label="Phone Number" type="tel" placeholder="+91 XXXXX XXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} />
 
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="language" className="text-sm font-medium text-[#172033]">Preferred Language *</label>
-              <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)} className="h-10 w-full rounded-lg border border-[#E4E7EC] bg-white px-3 text-sm text-[#172033] focus:outline-none focus:ring-2 focus:ring-[#155EEF]">
+              <label htmlFor="language" className="text-sm font-medium text-[var(--ink-900)]">Preferred Language *</label>
+              <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)} className="h-10 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--ink-900)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors">
                 {LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
               </select>
             </div>
@@ -101,11 +101,11 @@ export default function PatientOnboarding() {
             <Input id="hospitalId" label="Hospital Identifier (optional)" placeholder="HIS ID or MRN" value={hospitalId} onChange={(e) => setHospitalId(e.target.value)} />
 
             {error && (
-              <p className="text-sm text-[#D92D20] bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+              <p className="text-sm text-[var(--status-error-fg)] bg-[var(--status-error-bg)] border border-[var(--status-error-bd)] rounded-md px-3 py-2">{error}</p>
             )}
 
-            <Button type="submit" isLoading={isLoading} size="lg" className="w-full mt-2">
-              Save Profile & Continue
+            <Button type="submit" isLoading={isLoading} size="lg" className="w-full mt-2 cursor-pointer">
+              Save Profile &amp; Continue
             </Button>
           </form>
         </CardContent>

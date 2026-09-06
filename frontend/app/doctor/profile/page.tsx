@@ -123,10 +123,10 @@ export default function DoctorProfilePage() {
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Header */}
-      <div className="border-b border-[#E4E7EC] pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="border-b border-[var(--ink-200)] pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-[#172033]">Doctor Profile & Security</h1>
-          <p className="text-sm text-[#667085] mt-1">
+          <h1 className="text-xl font-bold text-[var(--ink-900)]">Doctor Profile &amp; Security</h1>
+          <p className="text-sm text-[var(--ink-500)] mt-1">
             Verified clinician account and hospital clinical workstation settings.
           </p>
         </div>
@@ -135,7 +135,7 @@ export default function DoctorProfilePage() {
             variant="secondary"
             size="sm"
             onClick={startEdit}
-            className="flex items-center gap-1.5 self-start sm:self-auto text-xs font-semibold text-[#155EEF] border-blue-200 hover:bg-blue-50"
+            className="flex items-center gap-1.5 self-start sm:self-auto text-xs font-semibold"
           >
             <Edit3 className="w-3.5 h-3.5" />
             <span>Edit Profile</span>
@@ -145,28 +145,28 @@ export default function DoctorProfilePage() {
 
       {/* Success Banner */}
       {saveSuccess && (
-        <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-sm text-emerald-800 flex items-center gap-2.5">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+        <div className="p-4 rounded-lg border border-[var(--status-success-bd)] bg-[var(--status-success-bg)] text-sm text-[var(--status-success-fg)] flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
           <span className="font-semibold">Doctor profile updated successfully. Details are updated across your workstation.</span>
         </div>
       )}
 
       {/* Identity Card */}
-      <Card className="shadow-xs">
-        <CardHeader className="border-b border-[#E4E7EC] px-5 py-4 flex flex-row items-center justify-between">
+      <Card>
+        <CardHeader className="border-b border-[var(--ink-200)] px-5 py-4 flex flex-row items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
-              <UserCircle className="w-7 h-7 text-[#155EEF]" />
+            <div className="w-12 h-12 rounded-lg bg-[var(--clinical-light)] border border-[var(--clinical-mid)] flex items-center justify-center">
+              <UserCircle className="w-7 h-7 text-[var(--clinical)]" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#172033]">Dr. {doctorName}</h2>
-              <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full mt-0.5">
+              <h2 className="text-base font-bold text-[var(--ink-900)]">Dr. {doctorName}</h2>
+              <span className="inline-flex items-center gap-1 text-xs text-[var(--status-success-fg)] font-semibold bg-[var(--status-success-bg)] border border-[var(--status-success-bd)] px-2 py-0.5 rounded-md mt-0.5">
                 <CheckCircle2 className="w-3 h-3" /> Clinician Account Active
               </span>
             </div>
           </div>
           {isEditing && (
-            <span className="text-xs font-medium text-[#155EEF] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded">
+            <span className="text-xs font-medium text-[var(--clinical)] bg-[var(--clinical-light)] border border-[var(--clinical-mid)] px-2 py-0.5 rounded">
               Editing Mode
             </span>
           )}
@@ -175,8 +175,8 @@ export default function DoctorProfilePage() {
           {isEditing ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {formError && (
-                <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-xs text-red-700 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                <div className="p-3 rounded-lg border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-xs text-[var(--status-error-fg)] flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{formError}</span>
                 </div>
               )}
@@ -193,15 +193,15 @@ export default function DoctorProfilePage() {
 
               {/* Email (Read-Only) */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700 flex items-center justify-between">
+                <label className="text-sm font-medium text-[var(--ink-700)] flex items-center justify-between">
                   <span>Email Address</span>
-                  <span className="text-xs text-[#667085] font-normal">Managed by login account</span>
+                  <span className="text-xs text-[var(--ink-500)] font-normal">Managed by login account</span>
                 </label>
                 <input
                   type="text"
                   disabled
                   value={doctorEmail}
-                  className="h-10 w-full rounded-lg border border-gray-200 bg-[#F7F9FC] px-3 text-sm text-[#667085] cursor-not-allowed"
+                  className="h-10 w-full rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface-2)] px-3 text-sm text-[var(--ink-500)] cursor-not-allowed"
                 />
               </div>
 
@@ -216,25 +216,25 @@ export default function DoctorProfilePage() {
 
               {/* Role & Account ID display in edit mode */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
-                <div className="p-3 bg-[#F7F9FC] rounded-lg border border-[#E4E7EC]">
-                  <span className="text-[#667085] block font-medium">System Role</span>
-                  <span className="text-sm font-semibold text-[#172033] capitalize">{user?.role ?? "doctor"}</span>
+                <div className="p-3 bg-[var(--bg-surface-2)] rounded-md border border-[var(--ink-200)]">
+                  <span className="text-[var(--ink-500)] block font-medium">System Role</span>
+                  <span className="text-sm font-semibold text-[var(--ink-900)] capitalize">{user?.role ?? "doctor"}</span>
                 </div>
-                <div className="p-3 bg-[#F7F9FC] rounded-lg border border-[#E4E7EC]">
-                  <span className="text-[#667085] block font-medium">Doctor User ID</span>
-                  <span className="text-sm font-mono text-[#172033] truncate block">{user?.id ?? "—"}</span>
+                <div className="p-3 bg-[var(--bg-surface-2)] rounded-md border border-[var(--ink-200)]">
+                  <span className="text-[var(--ink-500)] block font-medium">Doctor User ID</span>
+                  <span className="text-sm font-mono text-[var(--ink-900)] truncate block">{user?.id ?? "—"}</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E4E7EC]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--ink-200)]">
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   onClick={cancelEdit}
                   disabled={updateMutation.isPending}
-                  className="flex items-center gap-1.5"
+                  className="flex items-center gap-1.5 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                   <span>Cancel</span>
@@ -243,11 +243,11 @@ export default function DoctorProfilePage() {
                   type="submit"
                   size="sm"
                   disabled={updateMutation.isPending}
-                  className="bg-[#155EEF] hover:bg-[#1048C6] text-white flex items-center gap-1.5"
+                  className="flex items-center gap-1.5 cursor-pointer"
                 >
                   {updateMutation.isPending ? (
                     <>
-                      <Spinner className="w-3.5 h-3.5 text-white" />
+                      <Spinner className="w-3.5 h-3.5" />
                       <span>Saving Changes…</span>
                     </>
                   ) : (
@@ -261,33 +261,33 @@ export default function DoctorProfilePage() {
             </form>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3 bg-[#F7F9FC] rounded-lg border border-[#E4E7EC] space-y-1">
-                <span className="text-[#667085] font-medium flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-[#98A2B3]" /> Email Address
+              <div className="p-3 bg-[var(--bg-surface-2)] rounded-md border border-[var(--ink-200)] space-y-1">
+                <span className="text-[var(--ink-500)] font-medium flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-[var(--ink-400)]" /> Email Address
                 </span>
-                <p className="text-sm font-semibold text-[#172033]">{doctorEmail}</p>
-                <p className="text-[10px] text-[#667085]">Managed by login account</p>
+                <p className="text-sm font-semibold text-[var(--ink-900)]">{doctorEmail}</p>
+                <p className="text-[10px] text-[var(--ink-500)]">Managed by login account</p>
               </div>
 
-              <div className="p-3 bg-[#F7F9FC] rounded-lg border border-[#E4E7EC] space-y-1">
-                <span className="text-[#667085] font-medium flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-[#98A2B3]" /> Hospital Affiliation
+              <div className="p-3 bg-[var(--bg-surface-2)] rounded-md border border-[var(--ink-200)] space-y-1">
+                <span className="text-[var(--ink-500)] font-medium flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-[var(--ink-400)]" /> Hospital Affiliation
                 </span>
-                <p className="text-sm font-semibold text-[#172033]">{hospitalAffiliation}</p>
+                <p className="text-sm font-semibold text-[var(--ink-900)]">{hospitalAffiliation}</p>
               </div>
 
-              <div className="p-3 bg-[#F7F9FC] rounded-lg border border-[#E4E7EC] space-y-1">
-                <span className="text-[#667085] font-medium flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-[#98A2B3]" /> System Role
+              <div className="p-3 bg-[var(--bg-surface-2)] rounded-md border border-[var(--ink-200)] space-y-1">
+                <span className="text-[var(--ink-500)] font-medium flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-[var(--ink-400)]" /> System Role
                 </span>
-                <p className="text-sm font-semibold text-[#172033] capitalize">{user?.role ?? "doctor"}</p>
+                <p className="text-sm font-semibold text-[var(--ink-900)] capitalize">{user?.role ?? "doctor"}</p>
               </div>
 
-              <div className="p-3 bg-[#F7F9FC] rounded-lg border border-[#E4E7EC] space-y-1">
-                <span className="text-[#667085] font-medium flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-[#98A2B3]" /> Account Identifier
+              <div className="p-3 bg-[var(--bg-surface-2)] rounded-md border border-[var(--ink-200)] space-y-1">
+                <span className="text-[var(--ink-500)] font-medium flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-[var(--ink-400)]" /> Account Identifier
                 </span>
-                <p className="text-sm font-mono font-medium text-[#172033] truncate">{user?.id ?? "—"}</p>
+                <p className="text-sm font-mono font-medium text-[var(--ink-900)] truncate">{user?.id ?? "—"}</p>
               </div>
             </div>
           )}
@@ -295,17 +295,17 @@ export default function DoctorProfilePage() {
       </Card>
 
       {/* Security & Sign out */}
-      <Card className="shadow-xs border-red-100">
+      <Card>
         <CardContent className="p-5 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-[#172033]">Sign out of Clinical Workstation</h3>
-            <p className="text-xs text-[#667085] mt-0.5">End your current session on this terminal.</p>
+            <h3 className="text-sm font-bold text-[var(--ink-900)]">Sign out of Clinical Workstation</h3>
+            <p className="text-xs text-[var(--ink-500)] mt-0.5">End your current session on this terminal.</p>
           </div>
           <Button
-            variant="secondary"
+            variant="destructive"
             size="sm"
             onClick={handleLogout}
-            className="text-xs text-[#D92D20] border-red-200 hover:bg-red-50 flex items-center gap-1.5 font-semibold"
+            className="flex items-center gap-1.5 font-semibold cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" /> Sign out
           </Button>
