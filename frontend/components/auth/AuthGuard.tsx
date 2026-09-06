@@ -22,7 +22,7 @@ import { Spinner } from "@/components/ui/Spinner";
  * - Wrong-role access → redirected to correct dashboard
  */
 
-const PUBLIC_PATHS = ["/", "/login", "/auth/callback"];
+const PUBLIC_PATHS = ["/", "/login", "/staff-login", "/register", "/auth/callback"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -65,7 +65,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     // Authenticated user on login page → redirect to their dashboard
-    if (pathname === "/login" || pathname === "/") {
+    if (pathname === "/login" || pathname === "/staff-login" || pathname === "/") {
       router.replace(role === "patient" ? "/patient/dashboard" : "/doctor/dashboard");
       return;
     }
