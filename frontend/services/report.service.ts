@@ -27,6 +27,11 @@ export async function getPatientDashboardMetrics(): Promise<PatientDashboardMetr
   return apiGet<PatientDashboardMetrics>("/patients/dashboard/metrics");
 }
 
+/** GET /patients/documents/{document_id} */
+export async function getPatientDocument(documentId: string): Promise<PatientDocumentItem> {
+  return apiGet<PatientDocumentItem>(`/patients/documents/${documentId}`);
+}
+
 /** POST /intake/document/upload */
 export async function uploadPatientDocument(params: {
   encounterId: string;

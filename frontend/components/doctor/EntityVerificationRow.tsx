@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState } from "react";
 import { Check, X, Edit2, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -116,14 +116,20 @@ export function EntityVerificationRow({ entity, onVerify, disabled }: EntityVeri
         onClick={() => setShowProvenance(v => !v)}
         className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] text-[#667085] bg-[#F7F9FC] border-t border-[#E4E7EC] hover:bg-gray-100 transition-colors"
       >
-        <span>Source: {entity.source_type} · {entity.source_location ?? "—"}</span>
+        <span>
+          Source: {entity.source_document_name ? `Document: ${entity.source_document_name}` : entity.source_type} · {entity.source_location ?? "—"}
+        </span>
         {showProvenance ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </button>
 
       {showProvenance && (
         <div className="px-4 py-2.5 bg-[#F7F9FC] border-t border-[#E4E7EC] text-xs text-[#667085] grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div><p className="text-[#172033] font-medium">Source Type</p><p>{entity.source_type}</p></div>
-          <div><p className="text-[#172033] font-medium">Source ID</p><p className="font-mono">{entity.source_id.slice(0, 8)}…</p></div>
+          {entity.source_document_name ? (
+            <div><p className="text-[#172033] font-medium">Document</p><p className="font-semibold text-[#155EEF] truncate">{entity.source_document_name}</p></div>
+          ) : (
+            <div><p className="text-[#172033] font-medium">Source ID</p><p className="font-mono">{entity.source_id.slice(0, 8)}…</p></div>
+          )}
           <div><p className="text-[#172033] font-medium">Location</p><p>{entity.source_location ?? "—"}</p></div>
           <div><p className="text-[#172033] font-medium">Reviewed by</p><p>{entity.reviewed_by ? `Dr. (${entity.reviewed_by.slice(0, 6)}…)` : "Not reviewed"}</p></div>
         </div>

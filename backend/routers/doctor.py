@@ -24,7 +24,7 @@ ai_orchestration/brain.py is NOT called from any doctor endpoint —
 """
 
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -91,6 +91,8 @@ def _entity_to_detail(e: ExtractedEntity) -> EntityDetail:
         source_type=e.source_type.value,
         source_id=e.source_id,
         source_location=e.source_location,
+        source_document_id=e.document_id,
+        source_document_name=e.document.original_filename if e.document else None,
         reviewed_by=e.reviewed_by,
         reviewed_at=e.reviewed_at.isoformat() if e.reviewed_at else None,
     )
@@ -212,6 +214,7 @@ def get_summary(
     """
     Returns the clinical summary for an assigned encounter.
     Includes ALL extracted entities with full provenance and confidence.
+    Consolidates clinical facts from conversation and uploaded documents.
     """
     encounter = get_encounter_for_doctor(encounter_id, doctor, db)
 
@@ -232,6 +235,49 @@ def get_summary(
         .all()
     )
 
+    documents = (
+        db.query(Document)
+        .filter(Document.encounter_id == encounter.id)
+        .order_by(Document.upload_timestamp.desc())
+        .all()
+    )
+
+    # Detect investigations/labs from entities
+    investigations: List[str] = []
+    investigation_details: Dict[str, str] = {}
+    for e in entities:
+        is_lab_field = any(k in e.field_name.lower() for k in [
+            "investigation", "lab", "test", "report", "ecg", "blood", "xray",
+            "scan", "mri", "ct", "cbc", "lft", "kft", "hba1c", "glucose",
+            "cholesterol", "troponin", "platelet", "wbc", "rbc", "urine"
+        ])
+        is_doc_entity = e.source_type.value == "document" and e.field_name not in (
+            "chief_complaint", "onset", "duration", "exertion_related", "radiation",
+            "associated_symptoms", "medications", "allergies", "medical_history",
+            "past_history", "family_history", "social_history"
+        )
+        if is_lab_field or is_doc_entity:
+            field_title = e.field_name.replace("_", " ").title()
+            investigations.append(f"{field_title}: {e.value}")
+            investigation_details[field_title] = e.value
+
+    doc_details = [
+        DocumentDetailResponse(
+            id=d.id,
+            encounter_id=d.encounter_id,
+            patient_id=d.patient_id,
+            document_type=d.document_type,
+            original_filename=d.original_filename,
+            file_size=getattr(d, "file_size", None),
+            mime_type=getattr(d, "mime_type", None),
+            processing_status=getattr(d, "processing_status", "processed") or "processed",
+            language_hint=d.language_hint or "en",
+            upload_timestamp=d.upload_timestamp.isoformat() if d.upload_timestamp else "",
+            extracted_entities=[_entity_to_detail(e) for e in entities if e.document_id == d.id],
+        )
+        for d in documents
+    ]
+
     return SummaryDetailResponse(
         encounter_id=encounter.id,
         summary_id=summary.id,
@@ -239,6 +285,10 @@ def get_summary(
         generated_at=summary.generated_at.isoformat(),
         regenerated_at=summary.regenerated_at.isoformat() if summary.regenerated_at else None,
         used_entity_fields=summary.used_entity_fields,
+        documents_count=len(documents),
+        documents=doc_details,
+        investigations=investigations,
+        investigation_details=investigation_details,
         entities=[_entity_to_detail(e) for e in entities],
     )
 
@@ -310,12 +360,61 @@ def get_document(
     return DocumentDetailResponse(
         id=doc.id,
         encounter_id=doc.encounter_id,
+        patient_id=doc.patient_id,
         document_type=doc.document_type,
         original_filename=doc.original_filename,
+        file_size=getattr(doc, "file_size", None),
+        mime_type=getattr(doc, "mime_type", None),
+        processing_status=getattr(doc, "processing_status", "processed") or "processed",
         language_hint=doc.language_hint,
-        upload_timestamp=doc.upload_timestamp.isoformat(),
+        upload_timestamp=doc.upload_timestamp.isoformat() if doc.upload_timestamp else "",
         extracted_entities=[_entity_to_detail(e) for e in entities],
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/patient/{encounter_id}/documents
+# ---------------------------------------------------------------------------
+@router.get("/patient/{encounter_id}/documents", response_model=List[DocumentDetailResponse])
+def get_encounter_documents(
+    encounter_id: str,
+    doctor: User = Depends(_require_doctor),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns all documents for an assigned encounter with their extracted entities.
+    """
+    encounter = get_encounter_for_doctor(encounter_id, doctor, db)
+
+    documents = (
+        db.query(Document)
+        .filter(Document.encounter_id == encounter.id)
+        .order_by(Document.upload_timestamp.desc())
+        .all()
+    )
+
+    entities = (
+        db.query(ExtractedEntity)
+        .filter(ExtractedEntity.encounter_id == encounter.id)
+        .all()
+    )
+
+    return [
+        DocumentDetailResponse(
+            id=d.id,
+            encounter_id=d.encounter_id,
+            patient_id=d.patient_id,
+            document_type=d.document_type,
+            original_filename=d.original_filename,
+            file_size=getattr(d, "file_size", None),
+            mime_type=getattr(d, "mime_type", None),
+            processing_status=getattr(d, "processing_status", "processed") or "processed",
+            language_hint=d.language_hint or "en",
+            upload_timestamp=d.upload_timestamp.isoformat() if d.upload_timestamp else "",
+            extracted_entities=[_entity_to_detail(e) for e in entities if e.document_id == d.id],
+        )
+        for d in documents
+    ]
 
 
 # ---------------------------------------------------------------------------

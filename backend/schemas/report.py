@@ -22,6 +22,8 @@ class PatientEntityEvidence(BaseModel):
     verification_status: str  # unreviewed | accepted | edited | rejected
     source_type: str          # intake_session | document
     source_location: Optional[str] = None
+    source_document_id: Optional[str] = None
+    source_document_name: Optional[str] = None
     reviewed_by: Optional[str] = None
     reviewed_at: Optional[str] = None
 
@@ -31,11 +33,20 @@ class PatientEntityEvidence(BaseModel):
 class PatientDocumentItem(BaseModel):
     """Document uploaded by patient."""
     id: str
+    document_id: Optional[str] = None
     encounter_id: str
+    patient_id: Optional[str] = None
     document_type: str
     original_filename: Optional[str] = None
+    filename: Optional[str] = None
     upload_timestamp: str
+    uploaded_at: Optional[str] = None
+    processing_status: str = "processed"
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
     entity_count: int = 0
+    extracted_entity_count: Optional[int] = None
+    extracted_entities: List[PatientEntityEvidence] = []
 
 
 class PatientTimelineItem(BaseModel):
@@ -103,6 +114,8 @@ class PatientReportDetailResponse(BaseModel):
     medical_history: List[str] = []
     medications: List[str] = []
     allergies: List[str] = []
+    investigations: List[str] = []
+    investigation_details: Dict[str, str] = {}
     other_history: Dict[str, str] = {}
 
     # 6. Schema Fields Not Captured ("Not provided" - never inferred)
@@ -112,6 +125,7 @@ class PatientReportDetailResponse(BaseModel):
     extracted_entities: List[PatientEntityEvidence] = []
 
     # 8. Documents Reviewed
+    documents_count: int = 0
     documents: List[PatientDocumentItem] = []
 
     # 9. Longitudinal Timeline

@@ -11,9 +11,17 @@ import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   FileText, History, Clock, FileCheck, CheckCircle2,
-  AlertTriangle, ShieldCheck
+  AlertTriangle, ShieldCheck, FolderOpen, FlaskConical,
+  ExternalLink, ChevronDown, ChevronUp, FileCheck2,
 } from "lucide-react";
-import type { VerifyAction } from "@/types/doctor";
+import type { VerifyAction, DocumentDetailResponse } from "@/types/doctor";
+
+function formatFileSize(bytes?: number | null): string {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function EncounterReviewPage() {
   const params = useParams();
@@ -25,8 +33,9 @@ export default function EncounterReviewPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [finalizeConfirm, setFinalizeConfirm] = useState(false);
   const [finalizeSuccess, setFinalizeSuccess] = useState(false);
+  const [expandedDocIds, setExpandedDocIds] = useState<Record<string, boolean>>({});
 
-  // 1. Clinical Summary + Entities
+  // 1. Clinical Summary + Entities (Consolidated)
   const { data: summary, isLoading: sumLoading, error: sumError } = useQuery({
     queryKey: ["doctor", "summary", encounterId],
     queryFn: () => getSummary(encounterId),
@@ -64,11 +73,15 @@ export default function EncounterReviewPage() {
     await verifyMut.mutateAsync({ entityId, action, newValue });
   }
 
+  function toggleDocExpand(id: string) {
+    setExpandedDocIds(prev => ({ ...prev, [id]: !prev[id] }));
+  }
+
   if (sumLoading) {
     return (
       <div className="py-24 flex flex-col items-center justify-center gap-3">
         <Spinner />
-        <p className="text-xs text-[#667085]">Loading clinical intake record…</p>
+        <p className="text-xs text-[#667085]">Loading consolidated clinical intake record…</p>
       </div>
     );
   }
@@ -99,6 +112,9 @@ export default function EncounterReviewPage() {
   const medicalHistory = entities.filter(e => e.field_name.toLowerCase().includes("history") || e.field_name.toLowerCase().includes("past"));
   const medications = entities.filter(e => e.field_name.toLowerCase().includes("medication") || e.field_name.toLowerCase().includes("drug"));
   const allergies = entities.filter(e => e.field_name.toLowerCase().includes("allergy"));
+  const investigationsList = summary.investigations ?? [];
+  const docsList = summary.documents ?? [];
+  const docsCount = summary.documents_count ?? docsList.length;
 
   return (
     <div className="space-y-6 pb-16">
@@ -128,9 +144,9 @@ export default function EncounterReviewPage() {
       {/* Navigation Tabs */}
       <div className="flex border-b border-[#E4E7EC] gap-6">
         {[
-          { key: "overview",  label: "Overview",         icon: FileText },
+          { key: "overview",  label: "Consolidated Report",  icon: FileText },
           { key: "history",   label: `Clinical History (${unreviewedCount > 0 ? `${unreviewedCount} unreviewed` : "Verified"})`, icon: History },
-          { key: "documents", label: "Documents & Evidence", icon: FileCheck },
+          { key: "documents", label: `Documents (${docsCount})`, icon: FileCheck },
           { key: "timeline",  label: "Timeline",         icon: Clock },
         ].map(({ key, label, icon: Icon }) => (
           <button
@@ -146,7 +162,7 @@ export default function EncounterReviewPage() {
         ))}
       </div>
 
-      {/* TAB 1: Overview */}
+      {/* TAB 1: Consolidated Overview */}
       {activeTab === "overview" && (
         <div className="space-y-6">
           {/* Pre-Consultation Status Banner */}
@@ -154,13 +170,20 @@ export default function EncounterReviewPage() {
             <div className="flex items-center gap-2.5">
               <ShieldCheck className="w-5 h-5 text-[#155EEF]" />
               <div>
-                <p className="text-sm font-bold text-[#172033]">AI Pre-Consultation Summary</p>
-                <p className="text-xs text-[#667085]">Synthesized from multi-turn patient intake and verified document records.</p>
+                <p className="text-sm font-bold text-[#172033]">Consolidated Clinical Report</p>
+                <p className="text-xs text-[#667085]">
+                  Aggregated from conversational intake turns and {docsCount} uploaded medical document{docsCount === 1 ? "" : "s"}.
+                </p>
               </div>
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-              Awaiting Doctor Review
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-[#155EEF] border border-blue-200">
+                Documents reviewed: {docsCount}
+              </span>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                {unreviewedCount > 0 ? `${unreviewedCount} Awaiting Review` : "All Verified"}
+              </span>
+            </div>
           </div>
 
           {/* AI Clinical Summary */}
@@ -181,6 +204,7 @@ export default function EncounterReviewPage() {
 
           {/* Structured Clinical Sections */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Chief Complaint */}
             <Card className="shadow-xs">
               <CardHeader className="px-4 py-3 border-b border-[#E4E7EC]">
                 <CardTitle className="text-xs font-bold text-[#667085] uppercase tracking-wider">Chief Complaint</CardTitle>
@@ -190,14 +214,24 @@ export default function EncounterReviewPage() {
               </CardContent>
             </Card>
 
+            {/* Allergies */}
             <Card className="shadow-xs">
               <CardHeader className="px-4 py-3 border-b border-[#E4E7EC]">
                 <CardTitle className="text-xs font-bold text-[#667085] uppercase tracking-wider">Allergies</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 {allergies.length ? (
-                  <ul className="space-y-1 text-sm text-[#172033]">
-                    {allergies.map(a => <li key={a.id} className="font-medium">• {a.value}</li>)}
+                  <ul className="space-y-1.5 text-sm text-[#172033]">
+                    {allergies.map(a => (
+                      <li key={a.id} className="font-medium flex items-center justify-between gap-2">
+                        <span>• {a.value}</span>
+                        {a.source_document_name && (
+                          <span className="text-[10px] bg-blue-50 text-[#155EEF] px-1.5 py-0.5 rounded font-mono">
+                            Doc: {a.source_document_name}
+                          </span>
+                        )}
+                      </li>
+                    ))}
                   </ul>
                 ) : (
                   <p className="text-xs text-[#667085]">No known drug allergies reported.</p>
@@ -205,14 +239,24 @@ export default function EncounterReviewPage() {
               </CardContent>
             </Card>
 
+            {/* Medical History */}
             <Card className="shadow-xs">
               <CardHeader className="px-4 py-3 border-b border-[#E4E7EC]">
                 <CardTitle className="text-xs font-bold text-[#667085] uppercase tracking-wider">Medical History</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 {medicalHistory.length ? (
-                  <ul className="space-y-1 text-sm text-[#172033]">
-                    {medicalHistory.map(m => <li key={m.id} className="font-medium">• {m.field_name}: {m.value}</li>)}
+                  <ul className="space-y-1.5 text-sm text-[#172033]">
+                    {medicalHistory.map(m => (
+                      <li key={m.id} className="font-medium flex items-center justify-between gap-2">
+                        <span>• {m.field_name.replace(/_/g, " ")}: {m.value}</span>
+                        {m.source_document_name && (
+                          <span className="text-[10px] bg-blue-50 text-[#155EEF] px-1.5 py-0.5 rounded font-mono">
+                            Doc: {m.source_document_name}
+                          </span>
+                        )}
+                      </li>
+                    ))}
                   </ul>
                 ) : (
                   <p className="text-xs text-[#667085]">No significant past medical history captured.</p>
@@ -220,17 +264,54 @@ export default function EncounterReviewPage() {
               </CardContent>
             </Card>
 
+            {/* Current Medications */}
             <Card className="shadow-xs">
               <CardHeader className="px-4 py-3 border-b border-[#E4E7EC]">
                 <CardTitle className="text-xs font-bold text-[#667085] uppercase tracking-wider">Current Medications</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 {medications.length ? (
-                  <ul className="space-y-1 text-sm text-[#172033]">
-                    {medications.map(m => <li key={m.id} className="font-medium">• {m.value}</li>)}
+                  <ul className="space-y-1.5 text-sm text-[#172033]">
+                    {medications.map(m => (
+                      <li key={m.id} className="font-medium flex items-center justify-between gap-2">
+                        <span>• {m.value}</span>
+                        {m.source_document_name && (
+                          <span className="text-[10px] bg-blue-50 text-[#155EEF] px-1.5 py-0.5 rounded font-mono">
+                            Doc: {m.source_document_name}
+                          </span>
+                        )}
+                      </li>
+                    ))}
                   </ul>
                 ) : (
                   <p className="text-xs text-[#667085]">No regular medications reported.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Investigations / Lab Findings (Span 2) */}
+            <Card className="shadow-xs sm:col-span-2">
+              <CardHeader className="px-4 py-3 border-b border-[#E4E7EC] flex items-center justify-between">
+                <CardTitle className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <FlaskConical className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Investigations & Diagnostics ({investigationsList.length})</span>
+                </CardTitle>
+                <span className="text-xs text-[#667085]">Extracted from lab reports & diagnostic uploads</span>
+              </CardHeader>
+              <CardContent className="p-4">
+                {investigationsList.length ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {investigationsList.map((inv, idx) => (
+                      <div key={idx} className="p-2.5 rounded-lg border border-indigo-100 bg-indigo-50/40 flex items-center justify-between gap-2">
+                        <span className="font-semibold text-[#172033] truncate">• {inv}</span>
+                        <span className="text-[10px] bg-white border border-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded font-mono flex-shrink-0">
+                          Evidence
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#667085] italic">No laboratory investigations or diagnostics recorded yet.</p>
                 )}
               </CardContent>
             </Card>
@@ -317,29 +398,127 @@ export default function EncounterReviewPage() {
       {activeTab === "documents" && (
         <Card className="shadow-xs">
           <CardHeader className="border-b border-[#E4E7EC] px-5 py-4">
-            <CardTitle className="text-sm font-bold text-[#172033]">Uploaded Documents & OCR Evidence</CardTitle>
+            <CardTitle className="text-sm font-bold text-[#172033] flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FileCheck className="w-4 h-4 text-[#155EEF]" />
+                <span>Uploaded Documents ({docsList.length})</span>
+              </span>
+              <span className="text-xs text-[#667085] font-normal">
+                Click any document to inspect OCR text and extracted findings
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-5">
-            {entities.filter(e => e.source_type === "document").length === 0 ? (
+            {docsList.length === 0 ? (
               <div className="py-12 text-center text-sm text-[#667085]">
-                <FileCheck className="w-8 h-8 mx-auto mb-2 text-[#D0D5DD]" />
-                No document-sourced clinical entities for this encounter.
+                <FolderOpen className="w-8 h-8 mx-auto mb-2 text-[#D0D5DD]" />
+                No medical documents uploaded for this encounter.
               </div>
             ) : (
-              <div className="space-y-3">
-                {entities.filter(e => e.source_type === "document").map(docEntity => (
-                  <div key={docEntity.id} className="p-4 rounded-lg border border-[#E4E7EC] bg-[#F7F9FC] space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#172033] uppercase">{docEntity.field_name.replace(/_/g, " ")}</span>
-                      <StatusBadge status={docEntity.verification_status} />
+              <div className="space-y-4">
+                {docsList.map((doc: DocumentDetailResponse) => {
+                  const isExp = !!expandedDocIds[doc.id];
+                  const docEntities = doc.extracted_entities || [];
+                  return (
+                    <div
+                      key={doc.id}
+                      className="border border-[#E4E7EC] rounded-xl overflow-hidden bg-white hover:border-gray-300 transition-colors"
+                    >
+                      {/* Document Card Header */}
+                      <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#155EEF] flex items-center justify-center flex-shrink-0">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-[#172033] truncate">
+                              {doc.original_filename || "Document"}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-[#667085] mt-0.5 flex-wrap">
+                              <span className="capitalize font-semibold text-[#172033]">
+                                {doc.document_type.replace(/_/g, " ")}
+                              </span>
+                              <span>•</span>
+                              <span>Uploaded {new Date(doc.upload_timestamp).toLocaleString("en-IN")}</span>
+                              {doc.file_size && (
+                                <>
+                                  <span>•</span>
+                                  <span>{formatFileSize(doc.file_size)}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 flex-shrink-0">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <FileCheck2 className="w-3 h-3" />
+                            <span className="capitalize">{doc.processing_status || "Processed"}</span>
+                          </span>
+
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-[#155EEF] border border-blue-200">
+                            {docEntities.length} findings
+                          </span>
+
+                          <button
+                            onClick={() => toggleDocExpand(doc.id)}
+                            className="p-1.5 rounded-lg border border-[#E4E7EC] hover:bg-gray-50 text-[#667085] transition-colors ml-1"
+                            title={isExp ? "Collapse details" : "Expand details"}
+                          >
+                            {isExp ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Expandable Document Findings */}
+                      {isExp && (
+                        <div className="p-4 bg-[#F7F9FC] border-t border-[#E4E7EC] space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-xs font-bold text-[#172033] uppercase tracking-wider flex items-center gap-1.5">
+                              <ShieldCheck className="w-3.5 h-3.5 text-[#155EEF]" />
+                              <span>Extracted Clinical Entities</span>
+                            </h4>
+                            <span className="text-[11px] text-[#667085]">
+                              {docEntities.length} fields extracted
+                            </span>
+                          </div>
+
+                          {docEntities.length > 0 ? (
+                            <div className="space-y-2">
+                              {docEntities.map((ent) => (
+                                <div
+                                  key={ent.id}
+                                  className="p-3 bg-white rounded-lg border border-[#E4E7EC] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                                >
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-[#172033]">{ent.field_name.replace(/_/g, " ")}</span>
+                                      <span className="text-[#667085] font-mono text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">
+                                        {ent.source_location || "page 1"}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm font-medium text-[#172033] mt-0.5">{ent.value}</p>
+                                  </div>
+
+                                  <div className="flex items-center gap-3 flex-shrink-0">
+                                    <span className="text-[11px] font-mono text-[#12B76A] font-semibold">
+                                      {Math.round(ent.confidence * 100)}% conf
+                                    </span>
+                                    <StatusBadge status={ent.verification_status} />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-[#667085] italic py-2">
+                              No clinical fields extracted from this document.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm font-semibold text-[#172033]">{docEntity.value}</p>
-                    <div className="flex items-center gap-3 text-xs text-[#667085] pt-1">
-                      <span>Location: {docEntity.source_location ?? "Document page 1"}</span>
-                      <span>Confidence: {Math.round(docEntity.confidence * 100)}%</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

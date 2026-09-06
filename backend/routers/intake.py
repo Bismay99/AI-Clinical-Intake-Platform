@@ -21,7 +21,10 @@ Ownership chain enforced on every endpoint:
 
 import os
 import uuid
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
@@ -370,6 +373,8 @@ async def document_upload(
     safe_filename = f"{document_id}_{file.filename or 'upload'}"
     storage_ref = os.path.join(settings.upload_dir, safe_filename)
     file_bytes = await file.read()
+    file_size = len(file_bytes)
+    mime_type = file.content_type or "application/octet-stream"
 
     os.makedirs(settings.upload_dir, exist_ok=True)
     with open(storage_ref, "wb") as f_out:
@@ -379,9 +384,13 @@ async def document_upload(
     doc = Document(
         id=document_id,
         encounter_id=encounter.id,
+        patient_id=patient.id,
         document_type=document_type,
         storage_ref=storage_ref,
         original_filename=file.filename,
+        file_size=file_size,
+        mime_type=mime_type,
+        processing_status="processing",
         language_hint=language_hint,
         upload_timestamp=datetime.utcnow(),
     )
@@ -396,25 +405,34 @@ async def document_upload(
         file_bytes=file_bytes,
         language_hint=language_hint,
     )
-    brain_response = handle_document(brain_request)
+    try:
+        brain_response = handle_document(brain_request)
 
-    # ── Persist draft entities ────────────────────────────────────────────
-    new_db_entities: List[DBEntity] = []
-    for contract_entity in brain_response.draft_entities:
-        db_entity = contract_entity_to_db(
-            contract=contract_entity,
-            encounter_id=encounter.id,
-            document_id=document_id,
-        )
-        db.add(db_entity)
-        new_db_entities.append(db_entity)
+        new_db_entities: List[DBEntity] = []
+        for contract_entity in brain_response.draft_entities:
+            db_entity = contract_entity_to_db(
+                contract=contract_entity,
+                encounter_id=encounter.id,
+                document_id=document_id,
+            )
+            db.add(db_entity)
+            new_db_entities.append(db_entity)
 
-    db.flush()
+        doc.processing_status = "processed"
+        db.flush()
+    except Exception as exc:
+        logger.warning("Document extraction failed for document %s: %s", document_id, exc)
+        doc.processing_status = "failed"
+        new_db_entities = []
+        db.flush()
 
     return DocumentUploadResponse(
         document_id=document_id,
         encounter_id=encounter.id,
         document_type=document_type,
+        original_filename=file.filename,
+        processing_status=doc.processing_status,
+        file_size=file_size,
         entities_extracted=_entity_summaries(new_db_entities),
         entity_count=len(new_db_entities),
     )

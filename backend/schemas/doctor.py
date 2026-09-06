@@ -15,7 +15,7 @@ Design principles:
 from __future__ import annotations
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict
 
 
 # ---------------------------------------------------------------------------
@@ -33,6 +33,8 @@ class EntityDetail(BaseModel):
     source_type: str
     source_id: str
     source_location: Optional[str]
+    source_document_id: Optional[str] = None
+    source_document_name: Optional[str] = None
     reviewed_by: Optional[str]          # doctor user_id who last acted
     reviewed_at: Optional[str]          # ISO datetime
 
@@ -81,6 +83,10 @@ class SummaryDetailResponse(BaseModel):
     generated_at: str
     regenerated_at: Optional[str]
     used_entity_fields: Optional[List[str]]
+    documents_count: int = 0
+    documents: List[DocumentDetailResponse] = []
+    investigations: List[str] = []
+    investigation_details: Optional[Dict[str, str]] = None
     entities: List[EntityDetail]     # all entities for this encounter, with confidence/provenance
 
 
@@ -105,8 +111,12 @@ class TimelineEventResponse(BaseModel):
 class DocumentDetailResponse(BaseModel):
     id: str
     encounter_id: str
+    patient_id: Optional[str] = None
     document_type: str
     original_filename: Optional[str]
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    processing_status: Optional[str] = "processed"
     language_hint: str
     upload_timestamp: str
     extracted_entities: List[EntityDetail]

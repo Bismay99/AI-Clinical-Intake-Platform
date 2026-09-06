@@ -15,6 +15,8 @@ import {
   Stethoscope,
   Info,
   AlertTriangle,
+  FolderOpen,
+  FlaskConical,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -22,6 +24,13 @@ import { Spinner } from "@/components/ui/Spinner";
 import { Button } from "@/components/ui/Button";
 import { getPatientReport } from "@/services/report.service";
 import type { PatientReportDetailResponse } from "@/types/report";
+
+function formatFileSize(bytes?: number | null): string {
+  if (!bytes) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function PatientReportDetailPage() {
   const params = useParams();
@@ -152,20 +161,31 @@ export default function PatientReportDetailPage() {
           </div>
         </div>
 
-        {/* ── Status Banner ── */}
-        <div className="px-6 sm:px-8 py-3.5 bg-amber-50/70 border-b border-amber-200/60 text-xs text-amber-900 flex items-start gap-2.5">
-          <Info className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-          <div className="space-y-0.5">
-            <p className="font-semibold text-amber-800">
-              AI-Generated Pre-Consultation Information — Awaiting Doctor Review
-            </p>
-            <p className="text-amber-700/90 text-[11px] leading-relaxed">
-              This report compiles information provided during your intake session. It is not a medical diagnosis or treatment plan. A licensed physician will review and verify every clinical item before medical decisions are made.
-            </p>
-          </div>
-        </div>
-
+        {/* Report Body */}
         <div className="p-6 sm:p-8 space-y-8">
+          {/* Status Alert Banner */}
+          {isAwaitingReview ? (
+            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-xs text-[#B54708] flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600" />
+              <div>
+                <p className="font-bold text-[#172033]">Status: Awaiting Doctor Review</p>
+                <p className="mt-0.5 leading-relaxed">
+                  This report was compiled automatically by CareVoice from your conversation and uploaded documents. All clinical facts are awaiting physician verification before final consultation.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl border border-green-200 bg-green-50 text-xs text-[#12B76A] flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5 text-green-600" />
+              <div>
+                <p className="font-bold text-[#172033]">Status: Verified by Physician</p>
+                <p className="mt-0.5 leading-relaxed">
+                  Your clinical history has been reviewed and verified by the attending physician.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ── Section 1: Chief Complaint ── */}
           <section className="space-y-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-[#667085] flex items-center gap-2">
@@ -173,61 +193,61 @@ export default function PatientReportDetailPage() {
               <span>1. Chief Complaint</span>
             </h2>
             <div className="p-4 rounded-xl bg-[#F7F9FC] border border-[#E4E7EC]">
-              <p className="text-sm font-semibold text-[#172033]">
-                {report.chief_complaint || "Not provided during intake."}
+              <p className="text-base font-semibold text-[#172033]">
+                {report.chief_complaint || "No chief complaint explicitly recorded."}
               </p>
             </div>
           </section>
 
-          {/* ── Section 2: History of Presenting Complaint (HPI) ── */}
-          <section className="space-y-3">
+          {/* ── Section 2: History of Presenting Illness (HPI) ── */}
+          <section className="space-y-2">
             <h2 className="text-xs font-bold uppercase tracking-wider text-[#667085] flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF]" />
-              <span>2. History of Presenting Complaint</span>
+              <span>2. History of Presenting Illness (HPI)</span>
             </h2>
             {Object.keys(report.hpi_details).length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {Object.entries(report.hpi_details).map(([key, val]) => (
-                  <div key={key} className="p-3.5 rounded-xl border border-[#E4E7EC] bg-white space-y-1">
-                    <span className="text-[11px] font-semibold text-[#667085] block">{key}</span>
-                    <span className="text-sm text-[#172033] font-medium">{val}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {Object.entries(report.hpi_details).map(([field, val]) => (
+                  <div key={field} className="p-3.5 rounded-xl border border-[#E4E7EC] bg-white">
+                    <span className="text-[#667085] block mb-1 font-medium">{field}</span>
+                    <span className="font-semibold text-[#172033] text-sm">{val}</span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-[#667085] italic p-3 bg-[#F7F9FC] rounded-lg border border-[#E4E7EC]">
-                No structured presenting complaint history captured.
+              <p className="text-xs text-[#667085] italic p-3 rounded-xl bg-gray-50 border border-[#E4E7EC]">
+                No structured HPI attributes were captured during intake.
               </p>
             )}
           </section>
 
-          {/* ── Section 3: Clinical Summary Preview ── */}
+          {/* ── Section 3: Clinical Summary Narrative ── */}
           {report.summary_text && (
             <section className="space-y-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-[#667085] flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF]" />
-                <span>3. Pre-Consultation Summary Text</span>
+                <span>3. Pre-Consultation Summary Narrative</span>
               </h2>
               <div className="p-4 rounded-xl bg-blue-50/40 border border-blue-100 text-xs text-[#172033] leading-relaxed">
                 <p className="font-serif text-sm leading-relaxed">{report.summary_text}</p>
                 {report.summary_generated_at && (
                   <p className="text-[11px] text-[#667085] mt-2 italic">
-                    Synthesized on {report.summary_generated_at} from patient statements.
+                    Synthesized on {report.summary_generated_at} from patient intake and uploaded documents.
                   </p>
                 )}
               </div>
             </section>
           )}
 
-          {/* ── Section 4: Categorized Medical History ── */}
+          {/* ── Section 4: Categorized Medical History & Investigations ── */}
           <section className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-[#667085] flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF]" />
-              <span>4. Medical, Medication & Allergy History</span>
+              <span>4. Medical, Medication, Allergy & Investigation History</span>
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               {/* Medical History */}
-              <div className="p-3.5 rounded-xl border border-[#E4E7EC] space-y-2">
+              <div className="p-3.5 rounded-xl border border-[#E4E7EC] space-y-2 bg-white">
                 <span className="font-bold text-[#172033] block border-b border-[#E4E7EC] pb-1">
                   Past Medical History
                 </span>
@@ -243,7 +263,7 @@ export default function PatientReportDetailPage() {
               </div>
 
               {/* Medications */}
-              <div className="p-3.5 rounded-xl border border-[#E4E7EC] space-y-2">
+              <div className="p-3.5 rounded-xl border border-[#E4E7EC] space-y-2 bg-white">
                 <span className="font-bold text-[#172033] block border-b border-[#E4E7EC] pb-1">
                   Current Medications
                 </span>
@@ -259,7 +279,7 @@ export default function PatientReportDetailPage() {
               </div>
 
               {/* Allergies */}
-              <div className="p-3.5 rounded-xl border border-[#E4E7EC] space-y-2">
+              <div className="p-3.5 rounded-xl border border-[#E4E7EC] space-y-2 bg-white">
                 <span className="font-bold text-[#172033] block border-b border-[#E4E7EC] pb-1">
                   Known Allergies
                 </span>
@@ -271,6 +291,23 @@ export default function PatientReportDetailPage() {
                   </ul>
                 ) : (
                   <span className="text-[#667085] italic">Not provided</span>
+                )}
+              </div>
+
+              {/* Investigations (Lab / Diagnostic Findings) */}
+              <div className="p-3.5 rounded-xl border border-[#E4E7EC] space-y-2 bg-white">
+                <span className="font-bold text-[#172033] block border-b border-[#E4E7EC] pb-1 flex items-center gap-1.5 text-indigo-900">
+                  <FlaskConical className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Investigations / Labs</span>
+                </span>
+                {report.investigations && report.investigations.length > 0 ? (
+                  <ul className="space-y-1 text-[#172033]">
+                    {report.investigations.map((inv, idx) => (
+                      <li key={idx} className="font-medium truncate">• {inv}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="text-[#667085] italic">No lab findings captured</span>
                 )}
               </div>
             </div>
@@ -310,7 +347,7 @@ export default function PatientReportDetailPage() {
                 <span>6. AI Extraction Evidence & Provenance</span>
               </h2>
               <span className="text-[11px] text-[#667085]">
-                {report.extracted_entities.length} total facts
+                {report.extracted_entities.length} total facts captured
               </span>
             </div>
 
@@ -322,8 +359,8 @@ export default function PatientReportDetailPage() {
                       <th className="py-2.5 px-3">Clinical Field</th>
                       <th className="py-2.5 px-3">Extracted Value</th>
                       <th className="py-2.5 px-3">Confidence</th>
-                      <th className="py-2.5 px-3">Source</th>
-                      <th className="py-2.5 px-3">Doctor Status</th>
+                      <th className="py-2.5 px-3">Evidence Source</th>
+                      <th className="py-2.5 px-3">Doctor Verification</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E4E7EC] bg-white">
@@ -348,8 +385,17 @@ export default function PatientReportDetailPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-3 text-[#667085] font-mono text-[11px]">
-                            {ent.source_type}
-                            {ent.source_location ? ` (${ent.source_location})` : ""}
+                            {ent.source_document_name ? (
+                              <span className="text-[#155EEF] font-semibold">
+                                {ent.source_document_name}
+                                {ent.source_location ? ` (${ent.source_location})` : ""}
+                              </span>
+                            ) : (
+                              <span>
+                                {ent.source_type}
+                                {ent.source_location ? ` (${ent.source_location})` : ""}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3">
                             <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -361,7 +407,9 @@ export default function PatientReportDetailPage() {
                                 ? "bg-red-100 text-red-800"
                                 : "bg-amber-100 text-amber-800"
                             }`}>
-                              {ent.verification_status}
+                              {ent.verification_status === "unreviewed"
+                                ? "AI extracted — awaiting doctor verification"
+                                : `Doctor ${ent.verification_status}`}
                             </span>
                           </td>
                         </tr>
@@ -374,12 +422,17 @@ export default function PatientReportDetailPage() {
           </section>
 
           {/* ── Section 7: Documents Reviewed ── */}
-          {report.documents.length > 0 && (
+          {report.documents && report.documents.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[#667085] flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF]" />
-                <span>7. Uploaded Medical Documents</span>
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[#667085] flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF]" />
+                  <span>7. Uploaded Medical Documents ({report.documents_count || report.documents.length})</span>
+                </h2>
+                <span className="text-xs text-[#667085]">
+                  {report.documents_count || report.documents.length} records analyzed
+                </span>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 {report.documents.map((d) => (
                   <div key={d.id} className="p-3.5 rounded-xl border border-[#E4E7EC] bg-white flex items-center justify-between gap-3">
@@ -387,15 +440,16 @@ export default function PatientReportDetailPage() {
                       <FileText className="w-4 h-4 text-[#155EEF] flex-shrink-0" />
                       <div className="truncate">
                         <p className="font-semibold text-[#172033] truncate">
-                          {d.original_filename || "Medical Document"}
+                          {d.original_filename || d.filename || "Medical Document"}
                         </p>
                         <p className="text-[11px] text-[#667085]">
                           Type: {d.document_type.replace(/_/g, " ")} • {d.upload_timestamp}
+                          {d.file_size ? ` • ${formatFileSize(d.file_size)}` : ""}
                         </p>
                       </div>
                     </div>
                     <span className="text-[11px] bg-blue-50 text-[#155EEF] px-2 py-0.5 rounded font-medium flex-shrink-0">
-                      {d.entity_count} entities
+                      {d.extracted_entity_count ?? d.entity_count} entities
                     </span>
                   </div>
                 ))}
@@ -404,7 +458,7 @@ export default function PatientReportDetailPage() {
           )}
 
           {/* ── Section 8: Longitudinal Timeline ── */}
-          {report.timeline.length > 0 && (
+          {report.timeline && report.timeline.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-[#667085] flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#155EEF]" />

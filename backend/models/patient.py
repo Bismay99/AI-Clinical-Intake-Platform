@@ -34,6 +34,7 @@ class Patient(Base):
     user = relationship("User", back_populates="patient_profile")
     encounters = relationship("Encounter", back_populates="patient")
     timeline_events = relationship("TimelineEvent", back_populates="patient")
+    documents = relationship("Document", back_populates="patient")
 
     def __repr__(self) -> str:
         return f"<Patient id={self.id} name={self.full_name}>"

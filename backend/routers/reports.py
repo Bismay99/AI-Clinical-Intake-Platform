@@ -26,7 +26,7 @@ from backend.models.user import User, UserRole
 from backend.models.patient import Patient
 from backend.models.encounter import Encounter, EncounterStatus
 from backend.models.intake_session import IntakeSession
-from backend.models.extracted_entity import ExtractedEntity, VerificationStatus
+from backend.models.extracted_entity import ExtractedEntity, VerificationStatus, SourceType
 from backend.models.clinical_summary import ClinicalSummary
 from backend.models.timeline_event import TimelineEvent
 from backend.models.document import Document
@@ -194,6 +194,8 @@ def get_patient_report(
     medical_history: List[str] = []
     medications: List[str] = []
     allergies: List[str] = []
+    investigations: List[str] = []
+    investigation_details: Dict[str, str] = {}
     other_history: Dict[str, str] = {}
 
     captured_field_names = set()
@@ -203,10 +205,24 @@ def get_patient_report(
         captured_field_names.add(e.field_name)
         val = e.value.strip()
 
+        is_lab_field = any(k in e.field_name.lower() for k in [
+            "investigation", "lab", "test", "report", "ecg", "blood", "xray",
+            "scan", "mri", "ct", "cbc", "lft", "kft", "hba1c", "glucose",
+            "cholesterol", "troponin", "platelet", "wbc", "rbc", "urine"
+        ])
+        is_doc_entity = e.source_type == SourceType.document and e.field_name not in (
+            "chief_complaint", "onset", "duration", "exertion_related", "radiation",
+            "associated_symptoms", "medications", "allergies", "medical_history",
+            "past_history", "family_history", "social_history"
+        )
+
         if e.field_name == "chief_complaint":
             chief_complaint = val
         elif e.field_name in ("onset", "duration", "exertion_related", "radiation", "associated_symptoms"):
             hpi_details[FIELD_LABELS.get(e.field_name, e.field_name)] = val
+        elif is_lab_field or is_doc_entity:
+            investigations.append(f"{FIELD_LABELS.get(e.field_name, e.field_name.replace('_', ' ').title())}: {val}")
+            investigation_details[FIELD_LABELS.get(e.field_name, e.field_name.replace('_', ' ').title())] = val
         elif "medication" in e.field_name:
             medications.append(val)
         elif "allerg" in e.field_name:
@@ -216,6 +232,7 @@ def get_patient_report(
         else:
             other_history[FIELD_LABELS.get(e.field_name, e.field_name)] = val
 
+        doc_name = e.document.original_filename if e.document else None
         entity_evidence_list.append(
             PatientEntityEvidence(
                 field_name=e.field_name,
@@ -227,6 +244,8 @@ def get_patient_report(
                 verification_status=e.verification_status.value,
                 source_type=e.source_type.value,
                 source_location=e.source_location,
+                source_document_id=e.document_id,
+                source_document_name=doc_name,
                 reviewed_by=e.reviewed_by,
                 reviewed_at=e.reviewed_at.isoformat() if e.reviewed_at else None,
             )
@@ -258,15 +277,42 @@ def get_patient_report(
 
     doc_items: List[PatientDocumentItem] = []
     for d in documents:
-        doc_entities_count = sum(1 for ent in entities if ent.document_id == d.id)
+        doc_ents = [ent for ent in entities if ent.document_id == d.id]
+        doc_ent_evidence = [
+            PatientEntityEvidence(
+                field_name=ent.field_name,
+                label=FIELD_LABELS.get(ent.field_name, ent.field_name.replace("_", " ").title()),
+                value=ent.value,
+                original_ai_value=ent.original_ai_value,
+                confidence=round(ent.confidence, 2),
+                low_confidence_flag=ent.low_confidence_flag,
+                verification_status=ent.verification_status.value,
+                source_type=ent.source_type.value,
+                source_location=ent.source_location,
+                source_document_id=ent.document_id,
+                source_document_name=d.original_filename,
+                reviewed_by=ent.reviewed_by,
+                reviewed_at=ent.reviewed_at.isoformat() if ent.reviewed_at else None,
+            )
+            for ent in doc_ents
+        ]
         doc_items.append(
             PatientDocumentItem(
                 id=d.id,
+                document_id=d.id,
                 encounter_id=d.encounter_id,
+                patient_id=d.patient_id,
                 document_type=d.document_type,
                 original_filename=d.original_filename,
-                upload_timestamp=d.upload_timestamp.strftime("%b %d, %Y %I:%M %p"),
-                entity_count=doc_entities_count,
+                filename=d.original_filename,
+                upload_timestamp=d.upload_timestamp.strftime("%b %d, %Y %I:%M %p") if d.upload_timestamp else "",
+                uploaded_at=d.upload_timestamp.isoformat() if d.upload_timestamp else None,
+                processing_status=getattr(d, "processing_status", "processed") or "processed",
+                file_size=getattr(d, "file_size", None),
+                mime_type=getattr(d, "mime_type", None),
+                entity_count=len(doc_ents),
+                extracted_entity_count=len(doc_ents),
+                extracted_entities=doc_ent_evidence,
             )
         )
 
@@ -302,9 +348,12 @@ def get_patient_report(
         medical_history=medical_history,
         medications=medications,
         allergies=allergies,
+        investigations=investigations,
+        investigation_details=investigation_details,
         other_history=other_history,
         missing_fields=missing_fields,
         extracted_entities=entity_evidence_list,
+        documents_count=len(documents),
         documents=doc_items,
         timeline=timeline_items,
     )
@@ -320,34 +369,129 @@ def list_patient_documents(
     encounter_ids = [
         enc.id for enc in db.query(Encounter.id).filter(Encounter.patient_id == patient.id).all()
     ]
-    if not encounter_ids:
-        return []
 
     docs = (
         db.query(Document)
-        .filter(Document.encounter_id.in_(encounter_ids))
+        .filter(
+            (Document.patient_id == patient.id) | (Document.encounter_id.in_(encounter_ids))
+        )
         .order_by(Document.upload_timestamp.desc())
         .all()
     )
 
     items: List[PatientDocumentItem] = []
     for d in docs:
-        count = (
+        ents = (
             db.query(ExtractedEntity)
             .filter(ExtractedEntity.document_id == d.id)
-            .count()
+            .all()
         )
+        doc_ent_evidence = [
+            PatientEntityEvidence(
+                field_name=ent.field_name,
+                label=FIELD_LABELS.get(ent.field_name, ent.field_name.replace("_", " ").title()),
+                value=ent.value,
+                original_ai_value=ent.original_ai_value,
+                confidence=round(ent.confidence, 2),
+                low_confidence_flag=ent.low_confidence_flag,
+                verification_status=ent.verification_status.value,
+                source_type=ent.source_type.value,
+                source_location=ent.source_location,
+                source_document_id=ent.document_id,
+                source_document_name=d.original_filename,
+                reviewed_by=ent.reviewed_by,
+                reviewed_at=ent.reviewed_at.isoformat() if ent.reviewed_at else None,
+            )
+            for ent in ents
+        ]
         items.append(
             PatientDocumentItem(
                 id=d.id,
+                document_id=d.id,
                 encounter_id=d.encounter_id,
+                patient_id=d.patient_id,
                 document_type=d.document_type,
                 original_filename=d.original_filename,
-                upload_timestamp=d.upload_timestamp.strftime("%b %d, %Y %I:%M %p"),
-                entity_count=count,
+                filename=d.original_filename,
+                upload_timestamp=d.upload_timestamp.strftime("%b %d, %Y %I:%M %p") if d.upload_timestamp else "",
+                uploaded_at=d.upload_timestamp.isoformat() if d.upload_timestamp else None,
+                processing_status=getattr(d, "processing_status", "processed") or "processed",
+                file_size=getattr(d, "file_size", None),
+                mime_type=getattr(d, "mime_type", None),
+                entity_count=len(ents),
+                extracted_entity_count=len(ents),
+                extracted_entities=doc_ent_evidence,
             )
         )
     return items
+
+
+@router.get("/documents/{document_id}", response_model=PatientDocumentItem)
+def get_patient_document(
+    document_id: str,
+    current_user: User = Depends(_require_patient_user),
+    db: Session = Depends(get_db),
+):
+    patient = get_patient_for_user(current_user, db)
+
+    encounter_ids = [
+        enc.id for enc in db.query(Encounter.id).filter(Encounter.patient_id == patient.id).all()
+    ]
+
+    doc = (
+        db.query(Document)
+        .filter(
+            Document.id == document_id,
+            (Document.patient_id == patient.id) | (Document.encounter_id.in_(encounter_ids))
+        )
+        .first()
+    )
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    ents = (
+        db.query(ExtractedEntity)
+        .filter(ExtractedEntity.document_id == doc.id)
+        .all()
+    )
+    doc_ent_evidence = [
+        PatientEntityEvidence(
+            field_name=ent.field_name,
+            label=FIELD_LABELS.get(ent.field_name, ent.field_name.replace("_", " ").title()),
+            value=ent.value,
+            original_ai_value=ent.original_ai_value,
+            confidence=round(ent.confidence, 2),
+            low_confidence_flag=ent.low_confidence_flag,
+            verification_status=ent.verification_status.value,
+            source_type=ent.source_type.value,
+            source_location=ent.source_location,
+            source_document_id=ent.document_id,
+            source_document_name=doc.original_filename,
+            reviewed_by=ent.reviewed_by,
+            reviewed_at=ent.reviewed_at.isoformat() if ent.reviewed_at else None,
+        )
+        for ent in ents
+    ]
+    return PatientDocumentItem(
+        id=doc.id,
+        document_id=doc.id,
+        encounter_id=doc.encounter_id,
+        patient_id=doc.patient_id,
+        document_type=doc.document_type,
+        original_filename=doc.original_filename,
+        filename=doc.original_filename,
+        upload_timestamp=doc.upload_timestamp.strftime("%b %d, %Y %I:%M %p") if doc.upload_timestamp else "",
+        uploaded_at=doc.upload_timestamp.isoformat() if doc.upload_timestamp else None,
+        processing_status=getattr(doc, "processing_status", "processed") or "processed",
+        file_size=getattr(doc, "file_size", None),
+        mime_type=getattr(doc, "mime_type", None),
+        entity_count=len(ents),
+        extracted_entity_count=len(ents),
+        extracted_entities=doc_ent_evidence,
+    )
 
 
 @router.get("/dashboard/metrics", response_model=PatientDashboardMetrics)
@@ -365,13 +509,13 @@ def get_dashboard_metrics(
         1 for e in encounters if e.queue_status in (EncounterStatus.ready_for_review, EncounterStatus.completed)
     )
 
-    documents_count = 0
-    if encounter_ids:
-        documents_count = (
-            db.query(Document)
-            .filter(Document.encounter_id.in_(encounter_ids))
-            .count()
+    documents_count = (
+        db.query(Document)
+        .filter(
+            (Document.patient_id == patient.id) | (Document.encounter_id.in_(encounter_ids))
         )
+        .count()
+    )
 
     return PatientDashboardMetrics(
         consultations_count=consultations_count,

@@ -84,6 +84,9 @@ class DocumentUploadResponse(BaseModel):
     document_id: str
     encounter_id: str
     document_type: str
+    original_filename: Optional[str] = None
+    processing_status: str = "processed"
+    file_size: Optional[int] = None
     entities_extracted: List[ExtractedEntitySummary]
     entity_count: int
 
