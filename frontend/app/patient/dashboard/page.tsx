@@ -196,34 +196,40 @@ export default function PatientDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* ── SECTION A: CONTEXT HEADER ── */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--ink-200)]">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--ink-200)]">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-[var(--ink-900)] tracking-tight">
               {getGreeting(profile?.full_name)}
             </h1>
             <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-[var(--ink-400)]" />
-            <span className="hidden sm:inline text-xs text-[var(--ink-500)]">Patient Portal</span>
+            <span className="hidden sm:inline text-xs font-semibold text-[var(--clinical)]">Patient Portal</span>
           </div>
           <p className="text-xs text-[var(--ink-500)] mt-0.5">
-            Pre-consultation clinical workspace. Prepare symptoms and evidence for your attending physician.
+            AI Clinical Intake Workstation · Prepare symptoms and document evidence for your physician.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto text-xs">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--bg-surface)] border border-[var(--ink-200)] text-[var(--ink-700)] shadow-xs">
+            <Calendar className="w-3.5 h-3.5 text-[var(--clinical)]" />
+            <span className="font-medium text-[11px]">
+              {new Date().toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          </div>
           {profile?.id && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--bg-surface)] border border-[var(--ink-200)] text-xs text-[var(--ink-700)] shadow-[var(--shadow-xs)]">
-              <span className="text-[var(--ink-400)] font-medium">UID:</span>
+            <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--bg-surface)] border border-[var(--ink-200)] text-[11px] text-[var(--ink-700)] shadow-xs">
+              <span className="text-[var(--ink-400)]">UID:</span>
               <span className="font-mono text-[var(--clinical)] font-semibold">
-                {profile.id.slice(0, 8)}…{profile.id.slice(-4)}
+                {profile.id.slice(0, 8)}
               </span>
             </div>
           )}
           <Link
             href="/patient/profile"
-            className="p-1.5 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-500)] hover:text-[var(--clinical)] transition-colors"
+            className="p-1.5 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-500)] hover:text-[var(--clinical)] hover:bg-[var(--bg-surface-2)] transition-colors"
             title="Account Profile"
           >
             <User className="w-4 h-4" />
@@ -238,150 +244,213 @@ export default function PatientDashboard() {
         </div>
       )}
 
-      {/* ── SECTION B: ONE DOMINANT CURRENT-CONSULTATION AREA (PRIMARY HIERARCHY) ── */}
-      <section className="rounded-lg bg-[var(--bg-surface)] border-2 border-[var(--clinical-mid)] shadow-[var(--shadow-sm)] p-5 md:p-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-[var(--clinical-light)] rounded-full blur-2xl pointer-events-none opacity-50" />
+      {/* ── SECTION B: DOMINANT CURRENT VISIT WORKSPACE ── */}
+      <section className="rounded-lg bg-[var(--bg-surface)] border border-[var(--clinical-mid)] shadow-xs overflow-hidden">
+        <div className="px-4 py-2.5 bg-[var(--clinical-light)] border-b border-[var(--clinical-mid)] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[var(--clinical)] animate-pulse" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--clinical)]">
+              Current Visit
+            </h2>
+          </div>
+          {primaryActiveEncounter && (
+            <span className="text-[11px] font-mono font-semibold text-[var(--clinical-dark)] bg-white px-2 py-0.5 rounded border border-[var(--clinical-mid)]">
+              #{primaryActiveEncounter.id.slice(0, 8)}
+            </span>
+          )}
+        </div>
 
-        {primaryActiveEncounter?.queue_status === "intake_in_progress" ? (
-          /* State 1: Intake in progress */
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-            <div className="space-y-1.5 max-w-xl">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--status-info-bg)] text-[var(--status-info-fg)] border border-[var(--status-info-bd)]">
-                  <Clock className="w-3 h-3" /> Pre-Consultation In Progress
-                </span>
-                <span className="text-xs font-mono text-[var(--ink-400)]">
-                  #{primaryActiveEncounter.id.slice(0, 8)}
-                </span>
-              </div>
-              <h2 className="text-lg font-bold text-[var(--ink-900)]">
-                {primaryActiveEncounter.opd_department || "General OPD"} Consultation
-              </h2>
-              <p className="text-xs text-[var(--ink-500)] leading-relaxed">
-                Adaptive clinical intake is active. Answer questions with CareVoice AI or text so your doctor receives your structured history.
-              </p>
-            </div>
-            <Link href={`/patient/intake?encounter_id=${primaryActiveEncounter.id}`}>
-              <Button size="md" className="w-full sm:w-auto font-semibold cursor-pointer">
-                <span>Resume Intake</span>
-                <ArrowRight className="w-4 h-4 ml-1.5" />
-              </Button>
-            </Link>
-          </div>
-        ) : primaryActiveEncounter?.queue_status === "ready_for_review" ? (
-          /* State 2: Ready for review */
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-            <div className="space-y-1.5 max-w-xl">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border border-[var(--status-pending-bd)]">
-                  <Clock className="w-3 h-3" /> In Doctor Review Queue
-                </span>
-                <span className="text-xs font-mono text-[var(--ink-400)]">
-                  #{primaryActiveEncounter.id.slice(0, 8)}
-                </span>
-              </div>
-              <h2 className="text-lg font-bold text-[var(--ink-900)]">
-                Pre-Consultation Submitted · Awaiting Physician Verification
-              </h2>
-              <p className="text-xs text-[var(--ink-500)] leading-relaxed">
-                Clinical symptoms and evidence are synthesized and available on your attending physician&apos;s workstation.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Link href={`/patient/reports/${primaryActiveEncounter.id}`}>
-                <Button size="md" variant="secondary" className="w-full sm:w-auto font-semibold cursor-pointer">
-                  <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
-                  <span>View Submitted Summary</span>
-                </Button>
-              </Link>
-            </div>
-          </div>
-        ) : primaryActiveEncounter?.queue_status === "registered" ? (
-          /* State 3: Registered consultation ready to start */
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-            <div className="space-y-1.5 max-w-xl">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--status-success-bg)] text-[var(--status-success-fg)] border border-[var(--status-success-bd)]">
-                  <CheckCircle2 className="w-3 h-3" /> Ready to Begin
-                </span>
-                <span className="text-xs font-mono text-[var(--ink-400)]">
-                  #{primaryActiveEncounter.id.slice(0, 8)}
-                </span>
-              </div>
-              <h2 className="text-lg font-bold text-[var(--ink-900)]">
-                {primaryActiveEncounter.opd_department || "General OPD"} Visit
-              </h2>
-              <p className="text-xs text-[var(--ink-500)] leading-relaxed">
-                Begin speaking with CareVoice or type your symptoms. You can also upload past prescriptions or lab tests.
-              </p>
-            </div>
-            <Link href={`/patient/intake?encounter_id=${primaryActiveEncounter.id}`}>
-              <Button size="md" className="w-full sm:w-auto font-semibold cursor-pointer">
-                <span>Begin Pre-Consultation</span>
-                <ArrowRight className="w-4 h-4 ml-1.5" />
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          /* State 4: No active consultation */
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-            <div className="space-y-1.5 max-w-xl">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--status-neutral-bg)] text-[var(--status-neutral-fg)] border border-[var(--status-neutral-bd)]">
-                  <Calendar className="w-3 h-3" /> Outpatient Intake Desk
-                </span>
-              </div>
-              <h2 className="text-lg font-bold text-[var(--ink-900)]">
-                No Active Consultation
-              </h2>
-              <p className="text-xs text-[var(--ink-500)] leading-relaxed">
-                Schedule a consultation visit to begin AI pre-consultation triage and share documents with hospital doctors.
-              </p>
-            </div>
-            <div className="relative">
-              {!showDeptPicker ? (
-                <Button
-                  size="md"
-                  onClick={() => setShowDeptPicker(true)}
-                  className="font-semibold cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 mr-1.5" />
-                  <span>Start Consultation</span>
-                </Button>
-              ) : (
-                <div className="p-3 bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-md shadow-[var(--shadow-md)] space-y-2 w-64 z-20">
-                  <p className="text-xs font-bold text-[var(--ink-900)]">Select Department:</p>
-                  <div className="space-y-1">
-                    {DEPARTMENTS.map((dept) => (
-                      <button
-                        key={dept}
-                        onClick={() => {
-                          setShowDeptPicker(false);
-                          createMutation.mutate(dept);
-                        }}
-                        disabled={createMutation.isPending}
-                        className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-[var(--clinical-light)] hover:text-[var(--clinical)] transition-colors flex items-center justify-between cursor-pointer"
-                      >
-                        <span>{dept}</span>
-                        <ChevronRight className="w-3 h-3 opacity-50" />
-                      </button>
-                    ))}
+        <div className="p-4 sm:p-5">
+          {primaryActiveEncounter?.queue_status === "intake_in_progress" ? (
+            /* State 1: Intake in progress */
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1 max-w-2xl">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-[var(--ink-900)]">
+                      {primaryActiveEncounter.opd_department || "General OPD"} Consultation
+                    </h3>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--status-info-bg)] text-[var(--status-info-fg)] border border-[var(--status-info-bd)]">
+                      <Clock className="w-2.5 h-2.5" /> Pre-Consultation Active
+                    </span>
                   </div>
-                  <button
-                    onClick={() => setShowDeptPicker(false)}
-                    className="w-full text-center text-[11px] text-[var(--ink-500)] hover:underline pt-1 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
+                  <p className="text-xs text-[var(--ink-500)] leading-relaxed">
+                    CareVoice intake assistant is actively capturing your symptoms. Answer questions by voice or text to prepare your record for the physician.
+                  </p>
                 </div>
-              )}
+                <Link href={`/patient/intake?encounter_id=${primaryActiveEncounter.id}`} className="flex-shrink-0">
+                  <Button size="md" className="w-full sm:w-auto font-semibold cursor-pointer">
+                    <span>Continue Intake</span>
+                    <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Progress Pipeline */}
+              <div className="pt-2 border-t border-[var(--ink-200)] flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1.5 text-[var(--clinical)] font-semibold">
+                  <span className="w-5 h-5 rounded-full bg-[var(--clinical-light)] text-[var(--clinical)] flex items-center justify-center font-bold text-[10px] border border-[var(--clinical-mid)]">1</span>
+                  <span>History Intake (In Progress)</span>
+                </div>
+                <span className="text-[var(--ink-300)]">→</span>
+                <div className="flex items-center gap-1.5 text-[var(--ink-400)]">
+                  <span className="w-5 h-5 rounded-full border border-[var(--ink-200)] flex items-center justify-center text-[10px]">2</span>
+                  <span>Document Extraction</span>
+                </div>
+                <span className="text-[var(--ink-300)]">→</span>
+                <div className="flex items-center gap-1.5 text-[var(--ink-400)]">
+                  <span className="w-5 h-5 rounded-full border border-[var(--ink-200)] flex items-center justify-center text-[10px]">3</span>
+                  <span>Doctor Review</span>
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          ) : primaryActiveEncounter?.queue_status === "ready_for_review" ? (
+            /* State 2: Ready for review */
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1 max-w-2xl">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-[var(--ink-900)]">
+                      {primaryActiveEncounter.opd_department || "General OPD"} Consultation
+                    </h3>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border border-[var(--status-pending-bd)]">
+                      <Clock className="w-2.5 h-2.5" /> Ready for Doctor Review
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--ink-500)] leading-relaxed">
+                    Intake submitted. All captured symptoms and documents are queued on the attending physician&apos;s workstation.
+                  </p>
+                </div>
+                <Link href={`/patient/reports/${primaryActiveEncounter.id}`} className="flex-shrink-0">
+                  <Button size="md" variant="secondary" className="w-full sm:w-auto font-semibold cursor-pointer">
+                    <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
+                    <span>View Submitted Report</span>
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Progress Pipeline */}
+              <div className="pt-2 border-t border-[var(--ink-200)] flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1.5 text-[var(--status-success-fg)] font-semibold">
+                  <span className="w-5 h-5 rounded-full bg-[var(--status-success-bg)] text-[var(--status-success-fg)] flex items-center justify-center font-bold text-[10px] border border-[var(--status-success-bd)]">✓</span>
+                  <span>History Captured</span>
+                </div>
+                <span className="text-[var(--ink-300)]">→</span>
+                <div className="flex items-center gap-1.5 text-[var(--status-success-fg)] font-semibold">
+                  <span className="w-5 h-5 rounded-full bg-[var(--status-success-bg)] text-[var(--status-success-fg)] flex items-center justify-center font-bold text-[10px] border border-[var(--status-success-bd)]">✓</span>
+                  <span>Documents Linked</span>
+                </div>
+                <span className="text-[var(--ink-300)]">→</span>
+                <div className="flex items-center gap-1.5 text-[var(--status-pending-fg)] font-semibold">
+                  <span className="w-5 h-5 rounded-full bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] flex items-center justify-center font-bold text-[10px] border border-[var(--status-pending-bd)]">3</span>
+                  <span>Awaiting Physician Review</span>
+                </div>
+              </div>
+            </div>
+          ) : primaryActiveEncounter?.queue_status === "registered" ? (
+            /* State 3: Registered consultation ready to start */
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1 max-w-2xl">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-[var(--ink-900)]">
+                      {primaryActiveEncounter.opd_department || "General OPD"} Visit
+                    </h3>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--status-success-bg)] text-[var(--status-success-fg)] border border-[var(--status-success-bd)]">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> Ready to Begin
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--ink-500)] leading-relaxed">
+                    Consultation registered. Begin speaking with CareVoice or type your symptoms now.
+                  </p>
+                </div>
+                <Link href={`/patient/intake?encounter_id=${primaryActiveEncounter.id}`} className="flex-shrink-0">
+                  <Button size="md" className="w-full sm:w-auto font-semibold cursor-pointer">
+                    <span>Begin Pre-Consultation</span>
+                    <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Progress Pipeline */}
+              <div className="pt-2 border-t border-[var(--ink-200)] flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1.5 text-[var(--clinical)] font-semibold">
+                  <span className="w-5 h-5 rounded-full bg-[var(--clinical-light)] text-[var(--clinical)] flex items-center justify-center font-bold text-[10px] border border-[var(--clinical-mid)]">1</span>
+                  <span>Start Pre-Consultation</span>
+                </div>
+                <span className="text-[var(--ink-300)]">→</span>
+                <div className="flex items-center gap-1.5 text-[var(--ink-400)]">
+                  <span className="w-5 h-5 rounded-full border border-[var(--ink-200)] flex items-center justify-center text-[10px]">2</span>
+                  <span>Upload Past Records</span>
+                </div>
+                <span className="text-[var(--ink-300)]">→</span>
+                <div className="flex items-center gap-1.5 text-[var(--ink-400)]">
+                  <span className="w-5 h-5 rounded-full border border-[var(--ink-200)] flex items-center justify-center text-[10px]">3</span>
+                  <span>Doctor Consultation</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* State 4: No active consultation */
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1 max-w-xl">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-[var(--status-neutral-bg)] text-[var(--status-neutral-fg)] border border-[var(--status-neutral-bd)]">
+                    <Calendar className="w-2.5 h-2.5" /> Outpatient Intake Desk
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-[var(--ink-900)]">
+                  No Active Consultation
+                </h3>
+                <p className="text-xs text-[var(--ink-500)] leading-relaxed">
+                  Start an OPD consultation visit to begin AI pre-consultation triage and share documents with hospital doctors.
+                </p>
+              </div>
+              <div className="relative flex-shrink-0">
+                {!showDeptPicker ? (
+                  <Button
+                    size="md"
+                    onClick={() => setShowDeptPicker(true)}
+                    className="font-semibold cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 mr-1.5" />
+                    <span>Start Consultation</span>
+                  </Button>
+                ) : (
+                  <div className="p-3 bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-md shadow-md space-y-2 w-64 z-20">
+                    <p className="text-xs font-bold text-[var(--ink-900)]">Select Department:</p>
+                    <div className="space-y-1">
+                      {DEPARTMENTS.map((dept) => (
+                        <button
+                          key={dept}
+                          onClick={() => {
+                            setShowDeptPicker(false);
+                            createMutation.mutate(dept);
+                          }}
+                          disabled={createMutation.isPending}
+                          className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-[var(--clinical-light)] hover:text-[var(--clinical)] transition-colors flex items-center justify-between cursor-pointer"
+                        >
+                          <span>{dept}</span>
+                          <ChevronRight className="w-3 h-3 opacity-50" />
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setShowDeptPicker(false)}
+                      className="w-full text-center text-[11px] text-[var(--ink-500)] hover:underline pt-1 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
-      {/* ── SECTION C: COMPACT HORIZONTAL STAT STRIP (ELIMINATES GIANT CARDS) ── */}
-      <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-3 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[var(--ink-200)] text-xs">
+      {/* ── SECTION C: COMPACT CLINICAL STAT STRIP ── */}
+      <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-3 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[var(--ink-200)] text-xs shadow-xs">
         <div className="px-3 py-1.5">
           <span className="text-[var(--ink-500)] block text-[11px]">Total Consultations</span>
           <span className="text-base font-bold text-[var(--ink-900)] font-mono">
@@ -397,7 +466,7 @@ export default function PatientDashboard() {
         <div className="px-3 py-1.5">
           <span className="text-[var(--ink-500)] block text-[11px]">Verified Reports</span>
           <span className="text-base font-bold text-[var(--status-success-fg)] font-mono">
-            {isLoadingReports ? "…" : reports.length}
+            {isLoadingReports ? "…" : reports.filter((r) => r.queue_status === "completed").length}
           </span>
         </div>
         <div className="px-3 py-1.5">
@@ -408,13 +477,53 @@ export default function PatientDashboard() {
         </div>
       </section>
 
-      {/* ── TWO-COLUMN CLINICAL DASHBOARD WORKSPACE ── */}
+      {/* ── SECTION D: QUICK ACTIONS BAR ── */}
+      <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+        <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)]">
+          Quick Actions
+        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {primaryActiveEncounter ? (
+            <Link href={`/patient/intake?encounter_id=${primaryActiveEncounter.id}`}>
+              <Button size="xs" variant="secondary" className="cursor-pointer text-xs font-semibold">
+                <Activity className="w-3.5 h-3.5 mr-1 text-[var(--clinical)]" />
+                Resume Intake
+              </Button>
+            </Link>
+          ) : (
+            <Button size="xs" variant="secondary" onClick={() => setShowDeptPicker(true)} className="cursor-pointer text-xs font-semibold">
+              <Plus className="w-3.5 h-3.5 mr-1 text-[var(--clinical)]" />
+              New Visit
+            </Button>
+          )}
+          <Link href="/patient/documents">
+            <Button size="xs" variant="secondary" className="cursor-pointer text-xs font-semibold">
+              <Upload className="w-3.5 h-3.5 mr-1 text-[var(--clinical)]" />
+              Upload Document
+            </Button>
+          </Link>
+          <Link href="/patient/health-record">
+            <Button size="xs" variant="secondary" className="cursor-pointer text-xs font-semibold">
+              <ClipboardList className="w-3.5 h-3.5 mr-1 text-[var(--clinical)]" />
+              Health Record
+            </Button>
+          </Link>
+          <Link href="/patient/timeline">
+            <Button size="xs" variant="secondary" className="cursor-pointer text-xs font-semibold">
+              <Clock className="w-3.5 h-3.5 mr-1 text-[var(--clinical)]" />
+              Timeline
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* ── SECTION E: TWO-COLUMN CLINICAL DASHBOARD WORKSPACE ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* LEFT COLUMN: 7 cols — activity feed + reports */}
+        {/* LEFT COLUMN: 7 cols — Activity + Reports + Health Record snapshot */}
         <div className="lg:col-span-7 space-y-4">
 
-          {/* ── RECENT CLINICAL ACTIVITY ── primary secondary content */}
-          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden">
+          {/* ── RECENT CLINICAL ACTIVITY ── */}
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden shadow-xs">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)] flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-[var(--clinical)]" />
@@ -425,7 +534,7 @@ export default function PatientDashboard() {
                 className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--clinical)] hover:underline"
               >
                 <Clock className="w-3 h-3" />
-                Full timeline →
+                View Full Timeline →
               </Link>
             </div>
 
@@ -441,10 +550,9 @@ export default function PatientDashboard() {
                     <div
                       key={act.id}
                       className={`px-4 py-3 flex items-start justify-between gap-3 text-xs transition-colors ${
-                        isFirst ? "bg-[var(--clinical-light)]/30" : "hover:bg-[var(--bg-surface-2)]"
+                        isFirst ? "bg-[var(--clinical-light)]/40" : "hover:bg-[var(--bg-surface-2)]"
                       }`}
                     >
-                      {/* Status dot */}
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <span className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
                           act.badgeVariant === "success" ? "bg-[var(--status-success-fg)]"
@@ -488,15 +596,42 @@ export default function PatientDashboard() {
             )}
           </section>
 
+          {/* ── MY HEALTH RECORD SUMMARY ── */}
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden shadow-xs">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)] flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-[var(--clinical)]" />
+                My Health Record Snapshot
+              </h3>
+              <Link href="/patient/health-record" className="text-[11px] font-semibold text-[var(--clinical)] hover:underline flex items-center gap-0.5">
+                Explore Record <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="p-4 grid grid-cols-3 gap-3 text-center">
+              <div className="p-2.5 rounded-md bg-[var(--bg-surface-2)] border border-[var(--ink-200)]">
+                <span className="text-[10px] uppercase font-bold text-[var(--ink-400)] block">Visits</span>
+                <span className="text-base font-bold font-mono text-[var(--ink-900)]">{encounters.length}</span>
+              </div>
+              <div className="p-2.5 rounded-md bg-[var(--bg-surface-2)] border border-[var(--ink-200)]">
+                <span className="text-[10px] uppercase font-bold text-[var(--ink-400)] block">Reports</span>
+                <span className="text-base font-bold font-mono text-[var(--clinical)]">{reports.length}</span>
+              </div>
+              <div className="p-2.5 rounded-md bg-[var(--bg-surface-2)] border border-[var(--ink-200)]">
+                <span className="text-[10px] uppercase font-bold text-[var(--ink-400)] block">Documents</span>
+                <span className="text-base font-bold font-mono text-[var(--status-success-fg)]">{documents.length}</span>
+              </div>
+            </div>
+          </section>
+
           {/* ── PRE-CONSULTATION REPORTS ── */}
-          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden">
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden shadow-xs">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)] flex items-center gap-1.5">
                 <ClipboardList className="w-3.5 h-3.5 text-[var(--clinical)]" />
                 Pre-Consultation Reports
               </h3>
               <Link href="/patient/reports" className="text-[11px] font-semibold text-[var(--clinical)] hover:underline flex items-center gap-0.5">
-                All ({reports.length}) <ChevronRight className="w-3 h-3" />
+                All Reports ({reports.length}) <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -547,11 +682,11 @@ export default function PatientDashboard() {
           </section>
         </div>
 
-        {/* RIGHT COLUMN: 5 cols — document center + governance */}
+        {/* RIGHT COLUMN: 5 cols — Document Center + AI Governance */}
         <div className="lg:col-span-5 space-y-4">
 
           {/* ── DOCUMENT CENTER — compact supporting panel ── */}
-          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden">
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden shadow-xs">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)] flex items-center gap-1.5">
                 <FolderOpen className="w-3.5 h-3.5 text-[var(--clinical)]" />
@@ -571,8 +706,8 @@ export default function PatientDashboard() {
                 <FileText className="w-5 h-5 mx-auto text-[var(--ink-400)]" />
                 <p className="text-xs text-[var(--ink-500)]">No documents uploaded yet.</p>
                 <Link href="/patient/documents">
-                  <Button size="xs" variant="secondary" className="cursor-pointer text-xs">
-                    <Upload className="w-3 h-3 mr-1" /> Upload
+                  <Button size="xs" variant="secondary" className="cursor-pointer text-xs font-semibold">
+                    <Upload className="w-3 h-3 mr-1" /> Upload Document
                   </Button>
                 </Link>
               </div>
@@ -624,7 +759,7 @@ export default function PatientDashboard() {
           </section>
 
           {/* ── AI EXTRACTION & PHYSICIAN GOVERNANCE — concise clinical notice ── */}
-          <section className="border border-[var(--clinical-mid)] rounded-lg overflow-hidden">
+          <section className="border border-[var(--clinical-mid)] rounded-lg overflow-hidden shadow-xs">
             <div className="bg-[var(--clinical-light)] px-4 py-2.5 flex items-center gap-2 border-b border-[var(--clinical-mid)]">
               <ShieldCheck className="w-3.5 h-3.5 text-[var(--clinical)] flex-shrink-0" />
               <span className="text-xs font-bold text-[var(--clinical)]">AI Extraction &amp; Physician Governance</span>

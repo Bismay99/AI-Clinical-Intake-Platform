@@ -7,68 +7,77 @@
 
 :root {
   /* ── Surfaces ─────────────────────────────────────────────────────────── */
-  --bg-canvas:    #f1f5f9;   /* app canvas — cool slate */
-  --bg-surface:   #ffffff;   /* card / panel */
-  --bg-surface-2: #f8fafc;   /* inset section, table row alt */
-  --bg-inset:     #f1f5f9;   /* deeply nested / code bg */
+  --bg-canvas:    #F0F6FA;   /* clinical canvas — light blue-gray */
+  --bg-surface:   #FFFFFF;   /* pure white clinical surfaces */
+  --bg-surface-2: #F5F9FC;   /* subtle table row alt, inset card header */
+  --bg-inset:     #EBF3F7;   /* deeply nested section bg */
 
-  /* ── Clinical Primary (surgical teal-blue) ───────────────────────────── */
+  /* ── Clinical Primary (deep surgical teal-blue) ──────────────────────── */
   --clinical:        #0D5C75;
-  --clinical-light:  #E6F3F7;
-  --clinical-mid:    #B3DCF0;
-  --clinical-dark:   #083C4D;
-  --clinical-hover:  #0b4f65;
+  --clinical-light:  #E8F4F9;
+  --clinical-mid:    #B8DAE8;
+  --clinical-dark:   #064B63;
+  --clinical-hover:  #094B60;
+  --clinical-accent: #0F8FA8;
 
-  /* ── Ink / Neutral Text Scale ────────────────────────────────────────── */
-  --ink-900: #0F172A;   /* headings, primary labels */
-  --ink-800: #1E293B;   /* body text, dense data */
-  --ink-700: #334155;   /* secondary labels */
-  --ink-500: #64748B;   /* muted / helper text */
-  --ink-400: #94A3B8;   /* placeholder / disabled */
-  --ink-200: #E2E8F0;   /* borders, dividers */
-  --ink-100: #F1F5F9;   /* subtle backgrounds */
+  /* ── Sidebar Tokens (Dark Institutional Teal) ────────────────────────── */
+  --sidebar-bg:      #064B63;
+  --sidebar-hover:   rgba(255, 255, 255, 0.08);
+  --sidebar-active:  rgba(15, 143, 168, 0.28);
+  --sidebar-border:  rgba(255, 255, 255, 0.10);
+  --sidebar-fg:      #FFFFFF;
+  --sidebar-muted:   #9FB3C8;
+
+  /* ── Ink / Neutral Text Scale (Clinical Deep Navy) ───────────────────── */
+  --ink-900: #102A43;   /* primary titles, critical labels */
+  --ink-800: #243B53;   /* primary body, clinical rows */
+  --ink-700: #334E68;   /* secondary labels */
+  --ink-500: #486581;   /* secondary text, muted explanations */
+  --ink-400: #829AB1;   /* metadata, timestamps, placeholders */
+  --ink-200: #D9E6EC;   /* thin blue-gray clinical borders */
+  --ink-100: #EBF4FA;   /* subtle clinical tint */
 
   /* ── Status — dual-channel (color + icon) ────────────────────────────── */
-  --status-success-fg:  #065F46;
-  --status-success-bg:  #ECFDF5;
-  --status-success-bd:  #A7F3D0;
+  --status-success-fg:  #087F5B;
+  --status-success-bg:  #E6FCF5;
+  --status-success-bd:  #96F2D7;
 
-  --status-pending-fg:  #92400E;
-  --status-pending-bg:  #FFFBEB;
-  --status-pending-bd:  #FDE68A;
+  --status-pending-fg:  #B7791F;
+  --status-pending-bg:  #FEFCBF;
+  --status-pending-bd:  #F6E05E;
 
-  --status-error-fg:    #991B1B;
-  --status-error-bg:    #FEF2F2;
-  --status-error-bd:    #FECACA;
+  --status-error-fg:    #C53030;
+  --status-error-bg:    #FFF5F5;
+  --status-error-bd:    #FEB2B2;
 
-  --status-info-fg:     #1E40AF;
-  --status-info-bg:     #EFF6FF;
-  --status-info-bd:     #BFDBFE;
+  --status-info-fg:     #0D5C75;
+  --status-info-bg:     #E8F4F9;
+  --status-info-bd:     #B8DAE8;
 
-  --status-neutral-fg:  #334155;
-  --status-neutral-bg:  #F1F5F9;
-  --status-neutral-bd:  #E2E8F0;
+  --status-neutral-fg:  #334E68;
+  --status-neutral-bg:  #F0F6FA;
+  --status-neutral-bd:  #D9E6EC;
 
   /* ── Entity Verification Semantic Tokens ─────────────────────────────── */
   /* AI-Extracted: dashed sky border, light sky fill */
-  --entity-ai-fg:  #0369A1;
-  --entity-ai-bg:  #F0F9FF;
-  --entity-ai-bd:  #BAE6FD;
+  --entity-ai-fg:  #0D5C75;
+  --entity-ai-bg:  #F0F8FB;
+  --entity-ai-bd:  #B8DAE8;
 
   /* Doctor-Verified: solid emerald */
-  --entity-verified-fg: #065F46;
-  --entity-verified-bg: #ECFDF5;
-  --entity-verified-bd: #6EE7B7;
+  --entity-verified-fg: #087F5B;
+  --entity-verified-bg: #E6FCF5;
+  --entity-verified-bd: #63E6BE;
 
   /* Doctor-Edited: solid blue */
-  --entity-edited-fg: #1E40AF;
-  --entity-edited-bg: #EFF6FF;
-  --entity-edited-bd: #93C5FD;
+  --entity-edited-fg: #102A43;
+  --entity-edited-bg: #EBF4FA;
+  --entity-edited-bd: #A5D8F3;
 
   /* Doctor-Rejected: solid red */
-  --entity-rejected-fg: #991B1B;
-  --entity-rejected-bg: #FEF2F2;
-  --entity-rejected-bd: #FCA5A5;
+  --entity-rejected-fg: #C53030;
+  --entity-rejected-bg: #FFF5F5;
+  --entity-rejected-bd: #FEB2B2;
 
   /* ── Typography ──────────────────────────────────────────────────────── */
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto,
@@ -76,27 +85,27 @@
   --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
 
   /* ── Shadows ─────────────────────────────────────────────────────────── */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-xs: 0 1px 2px 0 rgb(16 42 67 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(16 42 67 / 0.06), 0 1px 2px -1px rgb(16 42 67 / 0.04);
+  --shadow-md: 0 4px 6px -1px rgb(16 42 67 / 0.07), 0 2px 4px -2px rgb(16 42 67 / 0.04);
 
   /* ── Radii ───────────────────────────────────────────────────────────── */
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  --radius-xl: 12px;
+  --radius-xl: 10px;
 
   /* ── Legacy aliases (kept for backward compat — do NOT use in new code) ─ */
   --background:  var(--bg-canvas);
   --surface:     var(--bg-surface);
   --primary:     var(--clinical);
-  --secondary:   #0f9d8a;
+  --secondary:   var(--clinical-accent);
   --text:        var(--ink-900);
   --text-muted:  var(--ink-500);
   --border:      var(--ink-200);
-  --success:     #12b76a;
-  --warning:     #f79009;
-  --error:       #d92d20;
+  --success:     var(--status-success-fg);
+  --warning:     var(--status-pending-fg);
+  --error:       var(--status-error-fg);
 }
 
 /* ─── Base ──────────────────────────────────────────────────────────────── */

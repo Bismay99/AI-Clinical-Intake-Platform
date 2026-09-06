@@ -23,13 +23,13 @@ interface AggregatedEvent {
   source: string;
   encounter_id: string;
   encounter_department: string | null;
+  current_status?: string | null;
 }
 
 function eventIcon(type: string) {
   const t = type.toLowerCase();
-  if (t.includes("registered") || t.includes("registration")) return Calendar;
-  if (t.includes("intake") || t.includes("consult")) return Stethoscope;
-  if (t.includes("document") || t.includes("upload")) return FileText;
+  if (t.includes("consultation") || t.includes("visit") || t.includes("encounter")) return Stethoscope;
+  if (t.includes("document") || t.includes("upload") || t.includes("lab") || t.includes("report")) return FileText;
   if (t.includes("review") || t.includes("verified") || t.includes("completed")) return CheckCircle2;
   return Activity;
 }
@@ -37,8 +37,8 @@ function eventIcon(type: string) {
 function eventColor(type: string): string {
   const t = type.toLowerCase();
   if (t.includes("completed") || t.includes("verified")) return "bg-[var(--status-success-bg)] border-[var(--status-success-bd)] text-[var(--status-success-fg)]";
-  if (t.includes("review")) return "bg-[var(--status-pending-bg)] border-[var(--status-pending-bd)] text-[var(--status-pending-fg)]";
-  if (t.includes("intake") || t.includes("in_progress")) return "bg-[var(--clinical-light)] border-[var(--clinical-mid)] text-[var(--clinical)]";
+  if (t.includes("review") || t.includes("pending")) return "bg-[var(--status-pending-bg)] border-[var(--status-pending-bd)] text-[var(--status-pending-fg)]";
+  if (t.includes("consultation") || t.includes("intake")) return "bg-[var(--clinical-light)] border-[var(--clinical-mid)] text-[var(--clinical)]";
   return "bg-[var(--bg-surface-2)] border-[var(--ink-200)] text-[var(--ink-700)]";
 }
 
@@ -64,38 +64,46 @@ export default function TimelinePage() {
     summaries.forEach((summary, idx) => {
       const detail: PatientReportDetailResponse | undefined = detailQueries[idx]?.data;
 
-      // System events from encounter status
-      result.push({
-        id: `${summary.encounter_id}-registered`,
-        date: summary.consultation_date,
-        date_uncertain: false,
-        event_type: "Consultation Registered",
-        source: "System",
-        encounter_id: summary.encounter_id,
-        encounter_department: summary.opd_department ?? null,
-      });
-
-      if (summary.queue_status !== "registered") {
+      // 1. Real encounter record (dated with actual consultation_date from DB)
+      if (summary.consultation_date) {
         result.push({
-          id: `${summary.encounter_id}-status-${summary.queue_status}`,
+          id: `enc-${summary.encounter_id}`,
           date: summary.consultation_date,
           date_uncertain: false,
-          event_type: summary.queue_status.replace(/_/g, " "),
-          source: "System",
+          event_type: `${summary.opd_department || "General OPD"} Consultation Visit`,
+          source: "Encounter Record",
           encounter_id: summary.encounter_id,
           encounter_department: summary.opd_department ?? null,
+          current_status: summary.queue_status.replace(/_/g, " "),
         });
       }
 
-      // Clinical timeline events from the full report
+      // 2. Real uploaded documents with genuine upload timestamps
+      if (detail?.documents) {
+        detail.documents.forEach((doc) => {
+          if (doc.upload_timestamp) {
+            result.push({
+              id: `doc-${doc.id}`,
+              date: doc.upload_timestamp.includes("T") ? doc.upload_timestamp.split("T")[0] : doc.upload_timestamp,
+              date_uncertain: false,
+              event_type: `Document: ${doc.original_filename || doc.filename || "Clinical Document"}`,
+              source: "Document Center",
+              encounter_id: summary.encounter_id,
+              encounter_department: summary.opd_department ?? null,
+            });
+          }
+        });
+      }
+
+      // 3. Real clinical history timeline items extracted by Gemini from patient statements
       if (detail?.timeline) {
         detail.timeline.forEach((t: PatientTimelineItem) => {
           result.push({
-            id: t.id,
+            id: `clin-${t.id}`,
             date: t.date ?? null,
             date_uncertain: t.date_uncertain,
             event_type: t.event_type,
-            source: "Clinical Record",
+            source: "Clinical History",
             encounter_id: summary.encounter_id,
             encounter_department: summary.opd_department ?? null,
           });
@@ -103,7 +111,7 @@ export default function TimelinePage() {
       }
     });
 
-    // Sort descending: events with dates first, then undated
+    // Sort descending: real timestamps first (latest first), then undated
     return result.sort((a, b) => {
       if (!a.date && !b.date) return 0;
       if (!a.date) return 1;
@@ -203,13 +211,18 @@ export default function TimelinePage() {
                         </p>
                       </div>
                     </div>
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-surface-2)] border border-[var(--ink-200)] text-[var(--ink-500)] font-medium">
                         {event.source}
                       </span>
+                      {event.current_status && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--clinical-light)] border border-[var(--clinical-mid)] text-[var(--clinical)] font-semibold capitalize">
+                          Current: {event.current_status}
+                        </span>
+                      )}
                       <Link
                         href={`/patient/reports/${event.encounter_id}`}
-                        className="text-[10px] text-[var(--clinical)] hover:underline font-medium"
+                        className="text-[10px] text-[var(--clinical)] hover:underline font-medium ml-auto"
                       >
                         View Report →
                       </Link>

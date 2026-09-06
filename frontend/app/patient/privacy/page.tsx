@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import {
   Shield,
   Brain,
@@ -149,17 +149,16 @@ export default function PrivacyPage() {
       </InfoSection>
 
       {/* ── Section 4: Your Rights ── */}
-      <InfoSection icon={Scale} title="Your Data Rights">
+      <InfoSection icon={Scale} title="Your Data Rights (DPDPA 2023)">
         <p>
-          Under applicable privacy frameworks (DPDPA 2023, and international standards including HIPAA where applicable), you have the following rights with respect to your clinical data:
+          Your privacy rights and available controls apply under applicable Indian data-protection requirements, including the Digital Personal Data Protection Act, 2023 (DPDPA), and relevant hospital policies:
         </p>
         <ul className="space-y-2">
           {[
-            { right: "Right of Access", desc: "You may request a complete export of all data held about you." },
-            { right: "Right to Correction", desc: "You may request correction of factually incorrect personal information (e.g., date of birth, name spelling)." },
-            { right: "Right to Erasure", desc: "You may request deletion of your account and associated clinical data, subject to any mandatory retention periods required by law." },
-            { right: "Right to Portability", desc: "You may request your data in a structured, machine-readable format (JSON or PDF report)." },
-            { right: "Right to Withdraw", desc: "You may withdraw from the CareFlow AI platform at any time. Withdrawal does not affect care provided by your hospital or physician." },
+            { right: "Right of Access & Summary", desc: "You may request a summary of the personal data and clinical information processed by the hospital through CareFlow AI." },
+            { right: "Right to Correction & Updating", desc: "You may request correction of inaccurate or outdated personal identifiers (e.g., spelling of name, contact phone number, or date of birth)." },
+            { right: "Right to Grievance Redressal", desc: "You have the right to register a grievance with the hospital's designated Data Protection Officer regarding data handling." },
+            { right: "Nomination of Representative", desc: "Under DPDPA 2023, in the event of death or incapacity, a nominated representative may exercise rights on your behalf." },
           ].map(({ right, desc }) => (
             <li key={right} className="p-3 rounded-lg border border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
               <p className="font-semibold text-[var(--ink-900)] text-xs mb-0.5">{right}</p>
@@ -168,7 +167,7 @@ export default function PrivacyPage() {
           ))}
         </ul>
         <p className="text-xs text-[var(--ink-500)] italic">
-          To exercise any of these rights, contact CareFlow AI support or your treating hospital's patient services team.
+          Note: This web portal provides clinical intake viewing. To officially exercise statutory DPDPA rights or request records withdrawal, contact your hospital administration or the Data Protection Officer listed below.
         </p>
       </InfoSection>
 
