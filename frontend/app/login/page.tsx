@@ -14,11 +14,15 @@ import {
   AlertCircle,
   Building2,
   ArrowRight,
+  User,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
 import { login, getMe } from "@/services/auth.service";
 import { ApiError, storeToken } from "@/lib/api";
+
+type EntryMode = "patient" | "doctor";
 
 function GoogleIcon() {
   return (
@@ -71,8 +75,13 @@ function LoginFormContent() {
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
 
+  const initialMode: EntryMode =
+    searchParams.get("mode") === "doctor" ? "doctor" : "patient";
+
+  const [mode, setMode] = useState<EntryMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [hospitalCode, setHospitalCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -94,28 +103,52 @@ function LoginFormContent() {
       setFormError("Please enter both your email address and password.");
       return;
     }
+    if (mode === "doctor") {
+      const code = hospitalCode.trim().toUpperCase();
+      if (!code) {
+        setFormError("Please enter your Hospital / Department Code.");
+        return;
+      }
+      // Local format check only — backend validation is required (see implementation plan)
+      const validFormat = (code.startsWith("HOSP-") && code.length >= 6) || code.length >= 4;
+      if (!validFormat) {
+        setFormError(
+          "Invalid hospital code format (e.g. HOSP-AIIMS-CARDIO). Contact your hospital administrator if you don't have a code."
+        );
+        return;
+      }
+    }
 
     setIsLoading(true);
     setFormError(null);
 
     try {
-      // 1. Submit login request
       const tokenResp = await login({ email: email.trim(), password });
-
-      // 2. Fetch authoritative user profile to check role
       const user = await getMe(tokenResp.access_token);
 
-      // 3. Block doctors from logging in on the patient portal — show invalid credentials
-      if (user.role === "doctor" || tokenResp.role === "doctor") {
-        setFormError("Invalid email or password. Please verify your credentials and try again.");
-        setIsLoading(false);
-        return;
+      if (mode === "patient") {
+        // Patient portal: block doctor accounts from using patient login
+        if (user.role === "doctor" || tokenResp.role === "doctor") {
+          setFormError("Invalid email or password. Please verify your credentials and try again.");
+          setIsLoading(false);
+          return;
+        }
+        storeToken(tokenResp.access_token);
+        setAuth(tokenResp.access_token, user);
+        router.push("/patient/dashboard");
+      } else {
+        // Doctor portal: backend is always authoritative for role and hospital affiliation
+        if (user.role !== "doctor" && tokenResp.role !== "doctor") {
+          setFormError(
+            "This portal is restricted to authorized physicians and hospital clinical staff. Please use the Patient Portal."
+          );
+          setIsLoading(false);
+          return;
+        }
+        storeToken(tokenResp.access_token);
+        setAuth(tokenResp.access_token, user);
+        router.push("/doctor/dashboard");
       }
-
-      // 4. Persist access token and set patient auth
-      storeToken(tokenResp.access_token);
-      setAuth(tokenResp.access_token, user);
-      router.push("/patient/dashboard");
     } catch (err: unknown) {
       console.error("Login failed:", err);
       if (err instanceof ApiError) {
@@ -141,24 +174,22 @@ function LoginFormContent() {
       {/* ── LEFT PANEL: Clinical Platform Identity & Trust ── */}
       <div className="lg:w-7/12 xl:w-3/5 bg-[#0D1117] text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden border-r border-[#1E293B]">
         {/* Subtle clinical glow — teal, not blue */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#0D5C75]/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#0D5C75]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="animate-fade-in anim-d-0 absolute top-0 right-0 w-96 h-96 bg-[#0D5C75]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="animate-fade-in anim-d-80 absolute bottom-0 left-0 w-96 h-96 bg-[#0D5C75]/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Ambient SVG ECG waveform */}
-        <div className="absolute inset-x-0 bottom-12 opacity-[0.07] pointer-events-none flex justify-center">
+        <div className="animate-fade-in anim-d-150 absolute inset-x-0 bottom-12 opacity-[0.07] pointer-events-none flex justify-center">
           <svg className="w-full max-w-2xl h-28 text-[#0D5C75]" viewBox="0 0 800 120" fill="none" stroke="currentColor">
             <path
               d="M0 60 H200 L220 20 L240 100 L260 40 L280 80 L300 60 H500 L520 15 L540 105 L560 35 L580 85 L600 60 H800"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
             />
           </svg>
         </div>
 
         {/* Header / Brand */}
         <div className="relative z-10 space-y-6">
-          <div className="flex items-center gap-3">
+          <div className="animate-settle-up anim-d-150 flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-[#0D5C75] flex items-center justify-center shadow-lg text-white border border-[#0D5C75]/60">
               <Stethoscope className="w-5 h-5" />
             </div>
@@ -173,7 +204,7 @@ function LoginFormContent() {
             </div>
           </div>
 
-          <div className="pt-6 space-y-4 max-w-xl">
+          <div className="animate-settle-up anim-d-220 pt-6 space-y-4 max-w-xl">
             <h1 className="text-3xl sm:text-4xl xl:text-[2.6rem] font-bold tracking-tight text-white leading-tight">
               Better patient histories.
               <br />
@@ -188,23 +219,11 @@ function LoginFormContent() {
         {/* Three Trust Pillars */}
         <div className="relative z-10 py-10 space-y-3 max-w-xl">
           {[
-            {
-              Icon: Mic,
-              title: "Voice-Led Clinical Intake (CareVoice)",
-              desc: "Multilingual adaptive conversational intake via LiveKit WebRTC — triaging symptoms and building real-time clinical timelines.",
-            },
-            {
-              Icon: FileText,
-              title: "Multimodal Document Extraction",
-              desc: "Rapid PaddleOCR and Gemini clinical parsing extracting diagnoses, medications, and laboratory values with strict evidence grounding.",
-            },
-            {
-              Icon: ShieldCheck,
-              title: "Doctor-Governed Provenance",
-              desc: "Immutable evidence citations linking every extracted entity back to exact document coordinates or patient consultation transcripts.",
-            },
-          ].map(({ Icon, title, desc }) => (
-            <div key={title} className="flex items-start gap-4 p-4 rounded-lg bg-white/[0.03] border border-white/[0.07]">
+            { Icon: Mic,        title: "Voice-Led Clinical Intake (CareVoice)", delay: "anim-d-300", desc: "Multilingual adaptive conversational intake via LiveKit WebRTC — triaging symptoms and building real-time clinical timelines." },
+            { Icon: FileText,   title: "Multimodal Document Extraction",        delay: "anim-d-380", desc: "Rapid PaddleOCR and Gemini clinical parsing extracting diagnoses, medications, and laboratory values with strict evidence grounding." },
+            { Icon: ShieldCheck,title: "Doctor-Governed Provenance",            delay: "anim-d-450", desc: "Immutable evidence citations linking every extracted entity back to exact document coordinates or patient consultation transcripts." },
+          ].map(({ Icon, title, desc, delay }) => (
+            <div key={title} className={`animate-settle-up ${delay} flex items-start gap-4 p-4 rounded-lg bg-white/[0.03] border border-white/[0.07]`}>
               <div className="w-8 h-8 rounded-md bg-[#0D5C75]/30 text-[#B3DCF0] flex items-center justify-center flex-shrink-0 mt-0.5">
                 <Icon className="w-4 h-4" />
               </div>
@@ -217,139 +236,209 @@ function LoginFormContent() {
         </div>
 
         {/* Security / Compliance Badges */}
-        <div className="relative z-10 pt-5 border-t border-[#1E293B] flex flex-wrap items-center gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-1.5">
-            <Building2 className="w-3.5 h-3.5 text-[#0D5C75]" />
-            <span>Hospital-Grade Infrastructure</span>
-          </div>
+        <div className="animate-fade-in anim-d-530 relative z-10 pt-5 border-t border-[#1E293B] flex flex-wrap items-center gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-[#0D5C75]" /><span>Hospital-Grade Infrastructure</span></div>
           <span>·</span>
-          <div className="flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-[#0D5C75]" />
-            <span>Role-Governed Access</span>
-          </div>
+          <div className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-[#0D5C75]" /><span>Role-Governed Access</span></div>
           <span>·</span>
-          <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-[#0D5C75]" />
-            <span>Audit-Proof Provenance</span>
-          </div>
+          <div className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-[#0D5C75]" /><span>Audit-Proof Provenance</span></div>
         </div>
       </div>
 
-      {/* ── RIGHT PANEL: Authentication Card ── */}
+      {/* ── RIGHT PANEL: Authentication ── */}
       <div className="lg:w-5/12 xl:w-2/5 bg-[var(--bg-canvas)] flex items-center justify-center p-6 sm:p-10 lg:p-12">
-        <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-lg border border-[var(--ink-200)] shadow-[var(--shadow-md)] p-8 sm:p-10 space-y-6">
-          {/* Card Header */}
-          <div className="space-y-1">
-            <div className="inline-flex items-center justify-center w-11 h-11 rounded-lg bg-[var(--clinical-light)] text-[var(--clinical)] mb-2 border border-[var(--clinical-mid)]">
-              <Lock className="w-5 h-5" />
-            </div>
-            <h2 className="text-xl font-bold text-[var(--ink-900)]">Sign in to CareFlow AI</h2>
-            <p className="text-xs text-[var(--ink-500)]">
-              Access your clinical records or hospital workstation
-            </p>
-          </div>
+        <div className="w-full max-w-md space-y-5">
 
-          {/* Error Banner */}
-          {error && (
-            <div className="p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-xs text-[var(--status-error-fg)] flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span className="leading-snug">{error}</span>
-            </div>
-          )}
-
-          {/* Google Sign-In */}
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-xs font-semibold text-[var(--ink-800)] hover:bg-[var(--ink-100)] transition-colors cursor-pointer shadow-[var(--shadow-xs)]"
+          {/* ── Patient / Doctor Entry Toggle ── */}
+          <div
+            role="group"
+            aria-label="Select portal type"
+            className="animate-fade-in anim-d-220 flex rounded-lg border border-[var(--ink-200)] bg-[var(--bg-surface)] p-1 gap-1 shadow-[var(--shadow-xs)]"
           >
-            <GoogleIcon />
-            <span>Continue with Google</span>
-          </button>
-
-          {/* Divider */}
-          <div className="relative flex items-center py-1">
-            <div className="flex-grow border-t border-[var(--ink-200)]"></div>
-            <span className="flex-shrink mx-3 text-[11px] text-[var(--ink-400)] uppercase tracking-wider font-semibold">
-              or password
-            </span>
-            <div className="flex-grow border-t border-[var(--ink-200)]"></div>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-[var(--ink-800)] mb-1.5">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="doctor@hospital.org or patient@email.com"
-                className="w-full text-xs p-3 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] placeholder:text-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-[var(--ink-800)] mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full text-xs p-3 pr-10 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] placeholder:text-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-400)] hover:text-[var(--ink-600)] cursor-pointer"
-                  tabIndex={-1}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              size="lg"
-              isLoading={isLoading}
-              className="w-full mt-2 cursor-pointer"
+            <button
+              type="button"
+              onClick={() => { setMode("patient"); setFormError(null); setHospitalCode(""); }}
+              aria-pressed={mode === "patient"}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer animate-settle-left anim-d-300 ${
+                mode === "patient"
+                  ? "bg-[var(--clinical)] text-white shadow-[var(--shadow-sm)]"
+                  : "text-[var(--ink-500)] hover:text-[var(--ink-900)] hover:bg-[var(--ink-100)]"
+              }`}
             >
-              <span>Sign In</span>
-              {!isLoading && <ArrowRight className="w-3.5 h-3.5" />}
-            </Button>
-          </form>
+              <User className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Patient Portal</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode("doctor"); setFormError(null); }}
+              aria-pressed={mode === "doctor"}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-semibold transition-all cursor-pointer animate-settle-right anim-d-300 ${
+                mode === "doctor"
+                  ? "bg-[var(--clinical)] text-white shadow-[var(--shadow-sm)]"
+                  : "text-[var(--ink-500)] hover:text-[var(--ink-900)] hover:bg-[var(--ink-100)]"
+              }`}
+            >
+              <Stethoscope className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Doctor Panel</span>
+            </button>
+          </div>
+          <p className="animate-fade-in anim-d-380 text-[11px] text-center text-[var(--ink-400)]">
+            {mode === "patient"
+              ? "Patient Portal · For patients and visitors"
+              : "Doctor Panel · For doctors and clinical staff"}
+          </p>
 
-          {/* Registration & Doctor Workstation Links */}
-          <div className="pt-2 text-center border-t border-[var(--ink-200)] space-y-2">
-            <p className="text-xs text-[var(--ink-500)]">
-              Hospital doctor or staff member?{" "}
-              <Link
-                href="/staff-login"
-                className="font-semibold text-[var(--clinical)] hover:text-[var(--clinical-dark)] hover:underline inline-flex items-center gap-1"
-              >
-                <span>Doctor Workstation Sign In</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
+          {/* ── Login Card ── */}
+          <div className="animate-settle-up anim-d-380 bg-[var(--bg-surface)] rounded-lg border border-[var(--ink-200)] shadow-[var(--shadow-md)] p-8 sm:p-10 space-y-6">
+            {/* Card Header */}
+            <div className="space-y-1">
+              <div className="inline-flex items-center justify-center w-11 h-11 rounded-lg bg-[var(--clinical-light)] text-[var(--clinical)] mb-2 border border-[var(--clinical-mid)]">
+                <Lock className="w-5 h-5" />
+              </div>
+              <h2 className="text-xl font-bold text-[var(--ink-900)]">
+                {mode === "patient" ? "Sign in to CareFlow AI" : "Doctor Workstation Sign In"}
+              </h2>
+              <p className="text-xs text-[var(--ink-500)]">
+                {mode === "patient"
+                  ? "Access your clinical records and pre-consultation workspace"
+                  : "Access your physician workstation and patient queue"}
+              </p>
+            </div>
+
+            {/* Error Banner */}
+            {error && (
+              <div role="alert" className="p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-xs text-[var(--status-error-fg)] flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                <span className="leading-snug">{error}</span>
+              </div>
+            )}
+
+            {/* Google Sign-In */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-xs font-semibold text-[var(--ink-800)] hover:bg-[var(--ink-100)] transition-colors cursor-pointer shadow-[var(--shadow-xs)]"
+            >
+              <GoogleIcon />
+              <span>Continue with Google</span>
+            </button>
+
+            {/* Divider */}
+            <div className="relative flex items-center py-1">
+              <div className="flex-grow border-t border-[var(--ink-200)]" />
+              <span className="flex-shrink mx-3 text-[11px] text-[var(--ink-400)] uppercase tracking-wider font-semibold">or password</span>
+              <div className="flex-grow border-t border-[var(--ink-200)]" />
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="animate-settle-up anim-d-450">
+                <label htmlFor="email" className="block text-xs font-semibold text-[var(--ink-800)] mb-1.5">
+                  Email Address
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={mode === "patient" ? "patient@email.com" : "doctor@hospital.org"}
+                  className="w-full text-xs p-3 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] placeholder:text-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
+                />
+              </div>
+
+              <div className="animate-settle-up anim-d-530">
+                <label htmlFor="password" className="block text-xs font-semibold text-[var(--ink-800)] mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full text-xs p-3 pr-10 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] placeholder:text-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-400)] hover:text-[var(--ink-700)] cursor-pointer"
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Hospital Code — Doctor mode only */}
+              {mode === "doctor" && (
+                <div className="animate-settle-up anim-d-530 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="hospital-code" className="block text-xs font-semibold text-[var(--ink-800)]">
+                      Hospital / Department Code
+                    </label>
+                    <span className="text-[10px] text-[var(--ink-500)] flex items-center gap-1">
+                      <Building2 className="w-3 h-3" aria-hidden="true" /> Required
+                    </span>
+                  </div>
+                  <input
+                    id="hospital-code"
+                    type="text"
+                    required
+                    value={hospitalCode}
+                    onChange={(e) => setHospitalCode(e.target.value.toUpperCase())}
+                    placeholder="HOSP-XXXX"
+                    autoComplete="organization"
+                    className="w-full text-xs p-3 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] placeholder:text-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors font-mono"
+                  />
+                  <div className="flex items-start gap-1.5 p-2 rounded-md bg-[var(--status-info-bg)] border border-[var(--status-info-bd)] text-[10px] text-[var(--status-info-fg)]">
+                    <Info className="w-3 h-3 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                    <span>Hospital code format is validated locally. Authoritative verification is performed by your hospital administrator. Provided by your hospital administrator.</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="animate-settle-up anim-d-600">
+                <Button type="submit" size="lg" isLoading={isLoading} className="w-full mt-2 cursor-pointer">
+                  <span>{mode === "patient" ? "Sign In" : "Sign In to Workstation"}</span>
+                  {!isLoading && <ArrowRight className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
+            </form>
+
+            {/* Registration & Support Links */}
+            <div className="animate-fade-in anim-d-600 pt-2 text-center border-t border-[var(--ink-200)] space-y-2">
+              {mode === "patient" ? (
+                <p className="text-xs text-[var(--ink-500)]">
+                  New patient?{" "}
+                  <Link href="/patient/onboarding" className="font-semibold text-[var(--clinical)] hover:text-[var(--clinical-dark)] hover:underline">
+                    Register an account
+                  </Link>
+                </p>
+              ) : (
+                <p className="text-xs text-[var(--ink-500)]">
+                  Not a doctor?{" "}
+                  <button
+                    type="button"
+                    onClick={() => { setMode("patient"); setFormError(null); setHospitalCode(""); }}
+                    className="font-semibold text-[var(--clinical)] hover:text-[var(--clinical-dark)] hover:underline cursor-pointer"
+                  >
+                    Switch to Patient Portal
+                  </button>
+                </p>
+              )}
+            </div>
+
+            {/* Footer notice */}
+            <p className="animate-fade-in anim-d-600 text-[11px] text-center text-[var(--ink-400)] leading-normal">
+              Authorized hospital personnel and registered patients only. All actions are audited.
             </p>
           </div>
-
-          {/* Footer notice */}
-          <p className="text-[11px] text-center text-[var(--ink-400)] leading-normal">
-            Authorized hospital personnel and registered patients only. All actions are audited.
-          </p>
         </div>
       </div>
     </div>
@@ -372,4 +461,5 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+
 
