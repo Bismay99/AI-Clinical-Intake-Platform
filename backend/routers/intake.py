@@ -420,9 +420,17 @@ async def document_upload(
 
         doc.processing_status = "processed"
         db.flush()
+        processing_error = None
     except Exception as exc:
         logger.warning("Document extraction failed for document %s: %s", document_id, exc)
         doc.processing_status = "failed"
+        # Return a safe, user-friendly error summary without exposing secrets or stack traces
+        if "429" in str(exc) or "RESOURCE_EXHAUSTED" in str(exc):
+            processing_error = "AI clinical extraction rate limit exceeded. Please retry in a moment."
+        elif "quota" in str(exc).lower():
+            processing_error = "AI quota exceeded. Please check provider quota."
+        else:
+            processing_error = "Clinical extraction failed during AI parsing."
         new_db_entities = []
         db.flush()
 
@@ -432,6 +440,7 @@ async def document_upload(
         document_type=document_type,
         original_filename=file.filename,
         processing_status=doc.processing_status,
+        processing_error=processing_error,
         file_size=file_size,
         entities_extracted=_entity_summaries(new_db_entities),
         entity_count=len(new_db_entities),

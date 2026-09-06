@@ -42,6 +42,7 @@ class PatientDocumentItem(BaseModel):
     upload_timestamp: str
     uploaded_at: Optional[str] = None
     processing_status: str = "processed"
+    processing_error: Optional[str] = None
     file_size: Optional[int] = None
     mime_type: Optional[str] = None
     entity_count: int = 0

@@ -541,3 +541,72 @@ def test_completed_encounter_upload_rejected_with_409(client: TestClient):
     assert r_upload.status_code == 409
     assert "already been completed" in r_upload.json()["detail"]
 
+
+# 23. test_actual_prescription_pdf_produces_entities
+@pytest.mark.live_document_ai
+def test_actual_prescription_pdf_produces_entities(client: TestClient):
+    """
+    Verifies that uploading the exact PS47_test_doctor_prescription.pdf
+    runs through PDF rendering, PaddleOCR, Gemini extraction, evidence matching,
+    and produces persisted ExtractedEntity records with document provenance.
+    """
+    if not os.path.exists("PS47_test_doctor_prescription.pdf"):
+        pytest.skip("PS47_test_doctor_prescription.pdf not found in project root")
+
+    with open("PS47_test_doctor_prescription.pdf", "rb") as f:
+        pdf_bytes = f.read()
+
+    p = _create_patient_and_encounter(client, "real_pdf_e2e")
+    enc_id = p["encounter_id"]
+    h = p["headers"]
+
+    r = client.post(
+        "/intake/document/upload",
+        data={"encounter_id": enc_id, "document_type": "prescription"},
+        files={"file": ("PS47_test_doctor_prescription.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+        headers=h,
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["original_filename"] == "PS47_test_doctor_prescription.pdf"
+    assert data["processing_status"] == "processed"
+    assert data["entity_count"] > 0
+    assert len(data["entities_extracted"]) > 0
+
+    # Verify provenance attached to entities
+    first_ent = data["entities_extracted"][0]
+    assert first_ent["source_type"] == "document"
+    assert first_ent["source_location"] is not None
+    assert "bbox:" in first_ent["source_location"]
+
+
+# 24. test_failed_extraction_sets_failed_status
+def test_failed_extraction_sets_failed_status(client: TestClient, monkeypatch):
+    """
+    Verifies that if downstream extraction raises an exception, the Document
+    remains persisted with processing_status='failed' and processing_error populated.
+    """
+    import backend.routers.intake
+
+    def _mock_failure(*args, **kwargs):
+        raise RuntimeError("Simulated OCR failure")
+
+    monkeypatch.setattr(backend.routers.intake, "handle_document", _mock_failure)
+
+    p = _create_patient_and_encounter(client, "failed_doc_test")
+    enc_id = p["encounter_id"]
+    h = p["headers"]
+
+    r = client.post(
+        "/intake/document/upload",
+        data={"encounter_id": enc_id, "document_type": "prescription"},
+        files={"file": ("error_doc.pdf", io.BytesIO(b"%PDF-1.4 dummy"), "application/pdf")},
+        headers=h,
+    )
+    assert r.status_code == 201
+    data = r.json()
+    assert data["processing_status"] == "failed"
+    assert data["entity_count"] == 0
+    assert data["processing_error"] is not None
+
+

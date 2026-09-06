@@ -248,20 +248,25 @@ def _call_openai(client: Any, model: str, messages: List[Dict[str, str]]) -> str
         raise LlmApiError(f"OpenAI API error: {exc}") from exc
 
 
-def _is_transient_gemini_503(exc: Exception) -> bool:
-    """Check if exception is a transient 503 UNAVAILABLE / high-demand response from Gemini."""
+def _is_transient_gemini_error(exc: Exception) -> bool:
+    """Check if exception is a transient 503, rate limit backoff, or temporary network disconnect."""
     status_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
-    if status_code == 503:
+    if status_code in (503, 429):
         return True
     msg = str(exc).upper()
-    return "503" in msg and ("UNAVAILABLE" in msg or "HIGH DEMAND" in msg or "TEMPORARY" in msg)
+    transient_indicators = [
+        "503", "429", "UNAVAILABLE", "HIGH DEMAND", "TEMPORARY",
+        "SERVER DISCONNECTED", "REMOTEPROTOCOLERROR", "CONNECTION RESET",
+        "TIMEOUT", "TIMED OUT", "RESOURCE_EXHAUSTED",
+    ]
+    return any(indicator in msg for indicator in transient_indicators)
 
 
 def _call_gemini(client: Any, model: str, messages: List[Dict[str, str]]) -> str:
     """
     Call Google Gemini via google-genai SDK (genai.Client).
     System instruction is the system message; user content is the last user message.
-    Includes bounded exponential backoff retry for transient 503 UNAVAILABLE responses.
+    Includes bounded exponential backoff retry for transient 503/429/network errors.
     """
     system_text = next(
         (m["content"] for m in messages if m["role"] == "system"), ""
@@ -293,12 +298,12 @@ def _call_gemini(client: Any, model: str, messages: List[Dict[str, str]]) -> str
         except LlmResponseError:
             raise
         except Exception as exc:
-            # Check if transient 503 error and we have retries left
-            if attempt < max_retries and _is_transient_gemini_503(exc):
+            # Check if transient error and we have retries left
+            if attempt < max_retries and _is_transient_gemini_error(exc):
                 delay = backoff_delays[attempt]
                 logger.warning(
-                    "Gemini returned transient 503 UNAVAILABLE (attempt %d/%d). Retrying in %.1fs...",
-                    attempt + 1, max_retries, delay,
+                    "Gemini returned transient error: %s (attempt %d/%d). Retrying in %.1fs...",
+                    exc, attempt + 1, max_retries, delay,
                 )
                 time.sleep(delay)
                 continue
