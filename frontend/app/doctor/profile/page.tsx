@@ -121,7 +121,7 @@ export default function DoctorProfilePage() {
   const hospitalAffiliation = profile?.hospital_affiliation ?? user?.hospital_affiliation ?? "General OPD Division";
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       {/* Header */}
       <div className="border-b border-[var(--ink-200)] pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

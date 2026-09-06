@@ -199,11 +199,11 @@ function LoginFormContent() {
       {/* ── LEFT PANEL: Clinical Platform Identity & Trust ── */}
       <div className="lg:w-7/12 xl:w-3/5 bg-[#0D1117] text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden border-r border-[#1E293B]">
         {/* Subtle clinical glow — teal */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#0D5C75]/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#0D5C75]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[#0D5C75]/15 rounded-full blur-3xl pointer-events-none animate-login-bg" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#0D5C75]/10 rounded-full blur-3xl pointer-events-none animate-login-bg" />
 
         {/* Ambient SVG ECG waveform */}
-        <div className="absolute inset-x-0 bottom-12 opacity-[0.07] pointer-events-none flex justify-center">
+        <div className="absolute inset-x-0 bottom-12 opacity-[0.07] pointer-events-none flex justify-center animate-login-bg">
           <svg className="w-full max-w-2xl h-28 text-[#0D5C75]" viewBox="0 0 800 120" fill="none" stroke="currentColor">
             <path
               d="M0 60 H200 L220 20 L240 100 L260 40 L280 80 L300 60 H500 L520 15 L540 105 L560 35 L580 85 L600 60 H800"
@@ -215,7 +215,7 @@ function LoginFormContent() {
         </div>
 
         {/* Header / Brand */}
-        <div className="relative z-10 space-y-6">
+        <div className="relative z-10 space-y-6 animate-login-headline">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-[#0D5C75] flex items-center justify-center shadow-lg text-white border border-[#0D5C75]/60">
               <Stethoscope className="w-5 h-5" />
@@ -244,7 +244,7 @@ function LoginFormContent() {
         </div>
 
         {/* Three Trust Pillars */}
-        <div className="relative z-10 py-10 space-y-3 max-w-xl">
+        <div className="relative z-10 py-10 space-y-3 max-w-xl animate-login-pillars">
           {[
             {
               Icon: Mic,

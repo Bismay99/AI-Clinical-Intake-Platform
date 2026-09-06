@@ -17,6 +17,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CareVoiceOrb, type CareVoiceOrbState } from "@/components/patient/CareVoiceOrb";
 import type { IntakeTurnResponse } from "@/types/intake";
 import {
   type ConversationalLanguage,
@@ -486,64 +487,40 @@ function CareVoiceSession({
         </div>
       </div>
 
-      {/* Active Conversation Stage / Status Indicator */}
-      <div className="py-5 flex flex-col items-center justify-center text-center">
+      {/* Active Conversation Stage: CareVoice Realtime Voice Presence */}
+      <div className="py-3 flex flex-col items-center justify-center text-center">
         {isConnected ? (
-          <div className="w-full max-w-md flex flex-col items-center space-y-4">
-            {/* Animated Soundwave / Activity Visualization */}
-            <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-tr from-blue-50 to-teal-50 border-2 border-[#155EEF]/20">
-              {isSpeaking ? (
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-6 bg-[#155EEF] rounded-full animate-pulse" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-10 bg-[#0F9D8A] rounded-full animate-pulse" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-7 bg-[#155EEF] rounded-full animate-pulse" style={{ animationDelay: "300ms" }} />
-                  <span className="w-1.5 h-9 bg-[#0F9D8A] rounded-full animate-pulse" style={{ animationDelay: "75ms" }} />
-                  <span className="w-1.5 h-5 bg-[#155EEF] rounded-full animate-pulse" style={{ animationDelay: "225ms" }} />
-                </div>
-              ) : isListening ? (
-                <div className="relative">
-                  <span className="absolute -inset-2 rounded-full bg-blue-400/20 animate-ping" />
-                  <Mic className="w-7 h-7 text-[#155EEF]" />
-                </div>
-              ) : (
-                <Radio className="w-7 h-7 text-[#0F9D8A] animate-pulse" />
-              )}
-            </div>
+          <div className="w-full max-w-md flex flex-col items-center space-y-3">
+            {/* Cinematic Clinical Voice Orb */}
+            {(() => {
+              const orbState: CareVoiceOrbState = isAnalyzingTurn
+                ? "processing"
+                : isSpeaking || mode === "speaking"
+                ? "speaking"
+                : isListening || mode === "listening"
+                ? "listening"
+                : "idle";
 
-            {/* Speaking / Listening Activity Pill */}
-            <div>
-              {isAnalyzingTurn ? (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs font-semibold text-purple-700 animate-pulse">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600" />
-                  <span>Processing clinical response with CareFlow AI engine…</span>
-                </div>
-              ) : isSpeaking || mode === "speaking" ? (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-[#155EEF]">
-                  <Volume2 className="w-3.5 h-3.5 animate-bounce" />
-                  <span>CareVoice is speaking…</span>
-                </div>
-              ) : isListening || mode === "listening" ? (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700">
-                  <Mic className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-                  <span>Listening to your answer…</span>
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gray-50 border border-gray-200 text-xs font-medium text-[#667085]">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#0F9D8A]" />
-                  <span>Ready • Speak naturally whenever you want</span>
-                </div>
-              )}
-            </div>
+              return (
+                <CareVoiceOrb
+                  state={orbState}
+                  isMicActive={isListening || mode === "listening"}
+                  onToggleMic={handleStop}
+                  connectionStatus="Connected"
+                  className="w-full shadow-md"
+                />
+              );
+            })()}
 
             {/* Dynamic Conversational Language Indicator */}
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-[#155EEF] border border-blue-200 shadow-2xs">
-                <span className="w-2 h-2 rounded-full bg-[#155EEF] animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[var(--clinical-light)] text-[var(--clinical)] border border-[var(--clinical-mid)] shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-[var(--clinical)] animate-pulse" />
                 <span>
-                  Conversational Language:{" "}
+                  Language:{" "}
                   <strong>
                     {activeLanguage === null
-                      ? "Detecting..."
+                      ? "Auto-Detecting"
                       : activeLanguage === "hi"
                       ? "Hindi"
                       : activeLanguage === "hinglish"
@@ -556,13 +533,13 @@ function CareVoiceSession({
 
             {/* Authoritative Current Question from Backend */}
             {currentQuestion && !pathwayComplete && (
-              <div className="w-full bg-[#F7F9FC] border border-[#E4E7EC] rounded-xl p-3 text-left">
+              <div className="w-full bg-[var(--bg-surface)] border border-[var(--clinical-mid)] rounded-xl p-3.5 text-left shadow-xs">
                 <div className="flex items-center justify-between gap-1.5 mb-1">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#155EEF]">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--clinical)]">
                     <Stethoscope className="w-3.5 h-3.5" />
-                    <span>Target Clinical Question:</span>
+                    <span>Current Question:</span>
                   </div>
-                  <span className="text-[11px] font-medium text-[#667085] bg-white px-2 py-0.5 rounded border border-[#E4E7EC]">
+                  <span className="text-[10px] font-medium text-[var(--ink-500)] bg-[var(--bg-surface-2)] px-2 py-0.5 rounded border border-[var(--ink-200)]">
                     {activeLanguage === null
                       ? "Clinical Intent"
                       : activeLanguage === "hi"
@@ -572,11 +549,11 @@ function CareVoiceSession({
                       : "English"}
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-[#172033]">
+                <p className="text-sm font-semibold text-[var(--ink-900)] leading-relaxed">
                   {activeLanguage ? formatQuestionForLanguage(currentQuestion, activeLanguage) : currentQuestion}
                 </p>
                 {activeLanguage && activeLanguage !== "en" && formatQuestionForLanguage(currentQuestion, activeLanguage) !== currentQuestion && (
-                  <p className="text-xs text-[#667085] mt-1 italic">
+                  <p className="text-xs text-[var(--ink-500)] mt-1 italic">
                     Original intent: &ldquo;{currentQuestion}&rdquo;
                   </p>
                 )}
@@ -585,41 +562,45 @@ function CareVoiceSession({
 
             {/* Live Captured Speech Transcript Preview */}
             {lastUserTranscript && (
-              <div className="w-full bg-blue-50/60 border border-blue-100 rounded-xl p-3 text-left">
-                <p className="text-[11px] font-semibold text-[#155EEF] uppercase tracking-wider mb-0.5">
+              <div className="w-full bg-[var(--clinical-light)]/60 border border-[var(--clinical-mid)] rounded-xl p-3 text-left">
+                <p className="text-[10px] font-semibold text-[var(--clinical)] uppercase tracking-wider mb-0.5">
                   Captured Voice:
                 </p>
-                <p className="text-xs text-[#172033] italic">&ldquo;{lastUserTranscript}&rdquo;</p>
+                <p className="text-xs text-[var(--ink-900)] italic">&ldquo;{lastUserTranscript}&rdquo;</p>
               </div>
             )}
 
             {/* Live CareVoice AI Speech Preview */}
             {lastCareVoiceTranscript && (
-              <div className="w-full bg-emerald-50/60 border border-emerald-100 rounded-xl p-3 text-left">
-                <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider mb-0.5">
+              <div className="w-full bg-[var(--status-success-bg)] border border-[var(--status-success-bd)] rounded-xl p-3 text-left">
+                <p className="text-[10px] font-semibold text-[var(--status-success-fg)] uppercase tracking-wider mb-0.5">
                   CareVoice:
                 </p>
-                <p className="text-xs text-[#172033]">{lastCareVoiceTranscript}</p>
+                <p className="text-xs text-[var(--ink-900)]">{lastCareVoiceTranscript}</p>
               </div>
             )}
           </div>
         ) : isConnecting ? (
-          <div className="flex flex-col items-center space-y-3 py-3">
-            <Loader2 className="w-8 h-8 text-[#155EEF] animate-spin" />
-            <p className="text-sm font-medium text-[#172033]">Establishing real-time voice stream…</p>
-            <p className="text-xs text-[#667085]">Connecting with CareVoice conversational AI.</p>
+          <div className="w-full max-w-md">
+            <CareVoiceOrb
+              state="processing"
+              isMicActive={false}
+              connectionStatus="Connecting..."
+              subLabel="Establishing realtime clinical audio connection…"
+              className="w-full shadow-md"
+            />
           </div>
         ) : (
-          <div className="flex flex-col items-center text-center space-y-2 max-w-md py-1">
-            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-[#155EEF] mb-1">
-              <Mic className="w-6 h-6" />
-            </div>
-            <h3 className="text-sm font-semibold text-[#172033]">
-              Start Interactive Voice Pre-Consultation
-            </h3>
-            <p className="text-xs text-[#667085]">
-              CareVoice conducts a real-time clinical dialogue and transmits each verified answer directly to the CareFlow AI adaptive clinical engine.
-            </p>
+          <div className="w-full max-w-md">
+            <CareVoiceOrb
+              state="idle"
+              isMicActive={false}
+              onToggleMic={handleStart}
+              disabled={isConnecting || pathwayComplete}
+              connectionStatus="Ready"
+              subLabel="Click the orb or button below to begin voice intake"
+              className="w-full shadow-md"
+            />
           </div>
         )}
       </div>

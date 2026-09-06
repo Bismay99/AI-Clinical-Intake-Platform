@@ -116,6 +116,10 @@ export default function EncounterReviewPage() {
   const docsList = summary.documents ?? [];
   const docsCount = summary.documents_count ?? docsList.length;
 
+  const verifiedCount = entities.filter(e => e.verification_status === "accepted").length;
+  const editedCount = entities.filter(e => e.verification_status === "edited").length;
+  const rejectedCount = entities.filter(e => e.verification_status === "rejected").length;
+
   // Finalize action node — passed into PatientHeader as action prop
   const finalizeAction = !finalizeSuccess ? (
     finalizeConfirm ? (
@@ -125,11 +129,11 @@ export default function EncounterReviewPage() {
           variant="primary"
           onClick={() => finalizeMut.mutate()}
           isLoading={finalizeMut.isPending}
-          className="bg-[var(--status-success-fg)] hover:bg-emerald-800 text-white"
+          className="bg-[var(--status-success-fg)] hover:bg-emerald-800 text-white font-semibold cursor-pointer"
         >
-          Confirm Finalize
+          Confirm Finalize (Lock Record)
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => setFinalizeConfirm(false)}>
+        <Button size="sm" variant="secondary" onClick={() => setFinalizeConfirm(false)} className="cursor-pointer">
           Cancel
         </Button>
       </div>
@@ -138,7 +142,7 @@ export default function EncounterReviewPage() {
         size="sm"
         variant="secondary"
         onClick={() => setFinalizeConfirm(true)}
-        className="border-[var(--status-success-bd)] text-[var(--status-success-fg)] hover:bg-[var(--status-success-bg)]"
+        className="border-[var(--status-success-bd)] text-[var(--status-success-fg)] hover:bg-[var(--status-success-bg)] font-semibold cursor-pointer"
       >
         <FileCheck2 className="w-4 h-4" />
         Finalize Encounter
@@ -159,6 +163,68 @@ export default function EncounterReviewPage() {
         action={finalizeAction}
       />
 
+      {/* Finalize Confirmation Warning Box */}
+      {finalizeConfirm && (
+        <div className="p-4 rounded-lg border border-[var(--status-pending-bd)] bg-[var(--status-pending-bg)]/40 text-xs text-[var(--ink-800)] space-y-2">
+          <div className="flex items-center gap-2 font-bold text-[var(--status-pending-fg)]">
+            <AlertTriangle className="w-4 h-4 text-[var(--status-pending-fg)]" />
+            <span>Finalization Safety Gate: Confirm Clinical Closure</span>
+          </div>
+          <p className="leading-relaxed">
+            Finalizing this clinical encounter will commit all accepted, edited, and rejected findings to the patient&apos;s longitudinal medical record. Once finalized, this encounter becomes strictly read-only and no further modifications can be submitted.
+          </p>
+          <div className="flex items-center gap-2 pt-1 font-mono text-[11px] text-[var(--ink-700)]">
+            <span>Verified: {verifiedCount}</span>
+            <span>·</span>
+            <span>Edited: {editedCount}</span>
+            <span>·</span>
+            <span>Rejected: {rejectedCount}</span>
+            {unreviewedCount > 0 && (
+              <>
+                <span>·</span>
+                <span className="text-[var(--status-pending-fg)] font-bold">{unreviewedCount} findings still unreviewed</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Final Review & Physician Governance Bar (Section 8.5) */}
+      <div className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-[var(--clinical)]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)]">
+              Physician Governance &amp; Verification Progress
+            </span>
+          </div>
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs text-[var(--ink-500)]">
+            <span>AI Extracted: <strong className="text-[var(--ink-900)] font-mono">{entities.length}</strong></span>
+            <span>·</span>
+            <span>Doctor Verified: <strong className="text-[var(--status-success-fg)] font-mono">{verifiedCount}</strong></span>
+            <span>·</span>
+            <span>Doctor Edited: <strong className="text-[var(--status-info-fg)] font-mono">{editedCount}</strong></span>
+            <span>·</span>
+            <span>Doctor Rejected: <strong className="text-[var(--status-error-fg)] font-mono">{rejectedCount}</strong></span>
+            <span>·</span>
+            <span>Awaiting Review: <strong className={unreviewedCount > 0 ? "text-[var(--status-pending-fg)] font-mono font-bold" : "text-[var(--ink-500)] font-mono"}>{unreviewedCount}</strong></span>
+          </div>
+        </div>
+        {unreviewedCount > 0 && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setActiveTab("history");
+              setStatusFilter("unreviewed");
+            }}
+            className="text-xs self-start sm:self-auto cursor-pointer flex-shrink-0"
+          >
+            Review Pending ({unreviewedCount}) →
+          </Button>
+        )}
+      </div>
+
       {/* Finalize Success Banner */}
       {finalizeSuccess && (
         <div className="px-4 py-3 rounded-lg border border-[var(--status-success-bd)] bg-[var(--status-success-bg)] text-sm text-[var(--status-success-fg)] flex items-center justify-between gap-4">
@@ -166,7 +232,7 @@ export default function EncounterReviewPage() {
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span className="font-semibold">Encounter finalized. This record is now read-only.</span>
           </div>
-          <Button size="sm" variant="secondary" onClick={() => router.push("/doctor/dashboard")}>
+          <Button size="sm" variant="secondary" onClick={() => router.push("/doctor/dashboard")} className="cursor-pointer">
             Return to Queue
           </Button>
         </div>
