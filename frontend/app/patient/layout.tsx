@@ -79,9 +79,9 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
         ))}
       </nav>
 
-      {/* Main content */}
-      <main className="flex-1 md:ml-60 pt-14 md:pt-0 pb-20 md:pb-0">
-        <div className="max-w-4xl mx-auto px-4 md:px-8 py-6 md:py-8">{children}</div>
+      {/* Main content — Section 7.0 spacing fix: eliminate dead gutter and artificial max-width constraints */}
+      <main className="flex-1 md:ml-60 pt-14 md:pt-0 pb-20 md:pb-0 min-w-0">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">{children}</div>
       </main>
     </div>
   );
