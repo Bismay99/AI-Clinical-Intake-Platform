@@ -1,5 +1,5 @@
 /**
- * PS47 Badge Components — two semantic families:
+ * CareFlow AI Badge Components — two semantic families:
  *
  * 1. EncounterBadge — encounter lifecycle states
  *    (registered → intake_in_progress → submitted → ready_for_review → completed)

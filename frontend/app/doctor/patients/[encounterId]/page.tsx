@@ -81,7 +81,7 @@ export default function EncounterReviewPage() {
     return (
       <div className="py-24 flex flex-col items-center justify-center gap-3">
         <Spinner />
-        <p className="text-xs text-[#667085]">Loading consolidated clinical intake record…</p>
+        <p className="text-xs text-[var(--ink-500)]">Loading consolidated clinical intake record…</p>
       </div>
     );
   }
@@ -89,7 +89,7 @@ export default function EncounterReviewPage() {
   if (sumError || !summary) {
     return (
       <div className="max-w-xl mx-auto py-16 space-y-4">
-        <div className="p-4 rounded-xl border border-red-200 bg-red-50 text-sm text-[#D92D20] flex items-start gap-2.5">
+        <div className="p-4 rounded-xl border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-sm text-[var(--status-error-fg)] flex items-start gap-2.5">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">Encounter record not accessible</p>
@@ -240,27 +240,27 @@ export default function EncounterReviewPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Chief Complaint */}
             <Card className="shadow-xs">
-              <CardHeader className="px-4 py-3 border-b border-[#E4E7EC]">
-                <CardTitle className="text-xs font-bold text-[#667085] uppercase tracking-wider">Chief Complaint</CardTitle>
+              <CardHeader className="px-4 py-3 border-b border-[var(--ink-200)]">
+                <CardTitle className="text-xs font-bold text-[var(--ink-500)] uppercase tracking-wider">Chief Complaint</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <p className="text-sm font-semibold text-[#172033]">{chiefComplaint ?? "Reported in consultation summary"}</p>
+                <p className="text-sm font-semibold text-[var(--ink-900)]">{chiefComplaint ?? "Reported in consultation summary"}</p>
               </CardContent>
             </Card>
 
             {/* Allergies */}
             <Card className="shadow-xs">
-              <CardHeader className="px-4 py-3 border-b border-[#E4E7EC]">
-                <CardTitle className="text-xs font-bold text-[#667085] uppercase tracking-wider">Allergies</CardTitle>
+              <CardHeader className="px-4 py-3 border-b border-[var(--ink-200)]">
+                <CardTitle className="text-xs font-bold text-[var(--ink-500)] uppercase tracking-wider">Allergies</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 {allergies.length ? (
-                  <ul className="space-y-1.5 text-sm text-[#172033]">
+                  <ul className="space-y-1.5 text-sm text-[var(--ink-900)]">
                     {allergies.map(a => (
                       <li key={a.id} className="font-medium flex items-center justify-between gap-2">
                         <span>• {a.value}</span>
                         {a.source_document_name && (
-                          <span className="text-[10px] bg-blue-50 text-[#155EEF] px-1.5 py-0.5 rounded font-mono">
+                          <span className="text-[10px] bg-[var(--clinical-light)] text-[var(--clinical)] border border-[var(--clinical-mid)] px-1.5 py-0.5 rounded font-mono">
                             Doc: {a.source_document_name}
                           </span>
                         )}
@@ -268,24 +268,24 @@ export default function EncounterReviewPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-[#667085]">No known drug allergies reported.</p>
+                  <p className="text-xs text-[var(--ink-500)]">No known drug allergies reported.</p>
                 )}
               </CardContent>
             </Card>
 
             {/* Medical History */}
             <Card className="shadow-xs">
-              <CardHeader className="px-4 py-3 border-b border-[#E4E7EC]">
-                <CardTitle className="text-xs font-bold text-[#667085] uppercase tracking-wider">Medical History</CardTitle>
+              <CardHeader className="px-4 py-3 border-b border-[var(--ink-200)]">
+                <CardTitle className="text-xs font-bold text-[var(--ink-500)] uppercase tracking-wider">Medical History</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 {medicalHistory.length ? (
-                  <ul className="space-y-1.5 text-sm text-[#172033]">
+                  <ul className="space-y-1.5 text-sm text-[var(--ink-900)]">
                     {medicalHistory.map(m => (
                       <li key={m.id} className="font-medium flex items-center justify-between gap-2">
                         <span>• {m.field_name.replace(/_/g, " ")}: {m.value}</span>
                         {m.source_document_name && (
-                          <span className="text-[10px] bg-blue-50 text-[#155EEF] px-1.5 py-0.5 rounded font-mono">
+                          <span className="text-[10px] bg-[var(--clinical-light)] text-[var(--clinical)] border border-[var(--clinical-mid)] px-1.5 py-0.5 rounded font-mono">
                             Doc: {m.source_document_name}
                           </span>
                         )}
@@ -293,24 +293,24 @@ export default function EncounterReviewPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-[#667085]">No significant past medical history captured.</p>
+                  <p className="text-xs text-[var(--ink-500)]">No significant past medical history captured.</p>
                 )}
               </CardContent>
             </Card>
 
             {/* Current Medications */}
             <Card className="shadow-xs">
-              <CardHeader className="px-4 py-3 border-b border-[#E4E7EC]">
-                <CardTitle className="text-xs font-bold text-[#667085] uppercase tracking-wider">Current Medications</CardTitle>
+              <CardHeader className="px-4 py-3 border-b border-[var(--ink-200)]">
+                <CardTitle className="text-xs font-bold text-[var(--ink-500)] uppercase tracking-wider">Current Medications</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 {medications.length ? (
-                  <ul className="space-y-1.5 text-sm text-[#172033]">
+                  <ul className="space-y-1.5 text-sm text-[var(--ink-900)]">
                     {medications.map(m => (
                       <li key={m.id} className="font-medium flex items-center justify-between gap-2">
                         <span>• {m.value}</span>
                         {m.source_document_name && (
-                          <span className="text-[10px] bg-blue-50 text-[#155EEF] px-1.5 py-0.5 rounded font-mono">
+                          <span className="text-[10px] bg-[var(--clinical-light)] text-[var(--clinical)] border border-[var(--clinical-mid)] px-1.5 py-0.5 rounded font-mono">
                             Doc: {m.source_document_name}
                           </span>
                         )}
@@ -318,34 +318,34 @@ export default function EncounterReviewPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-[#667085]">No regular medications reported.</p>
+                  <p className="text-xs text-[var(--ink-500)]">No regular medications reported.</p>
                 )}
               </CardContent>
             </Card>
 
             {/* Investigations / Lab Findings (Span 2) */}
             <Card className="shadow-xs sm:col-span-2">
-              <CardHeader className="px-4 py-3 border-b border-[#E4E7EC] flex items-center justify-between">
-                <CardTitle className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <FlaskConical className="w-3.5 h-3.5 text-indigo-600" />
+              <CardHeader className="px-4 py-3 border-b border-[var(--ink-200)] flex items-center justify-between">
+                <CardTitle className="text-xs font-bold text-[var(--ink-900)] uppercase tracking-wider flex items-center gap-1.5">
+                  <FlaskConical className="w-3.5 h-3.5 text-[var(--clinical)]" />
                   <span>Investigations & Diagnostics ({investigationsList.length})</span>
                 </CardTitle>
-                <span className="text-xs text-[#667085]">Extracted from lab reports & diagnostic uploads</span>
+                <span className="text-xs text-[var(--ink-500)]">Extracted from lab reports & diagnostic uploads</span>
               </CardHeader>
               <CardContent className="p-4">
                 {investigationsList.length ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     {investigationsList.map((inv, idx) => (
-                      <div key={idx} className="p-2.5 rounded-lg border border-indigo-100 bg-indigo-50/40 flex items-center justify-between gap-2">
-                        <span className="font-semibold text-[#172033] truncate">• {inv}</span>
-                        <span className="text-[10px] bg-white border border-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded font-mono flex-shrink-0">
+                      <div key={idx} className="p-2.5 rounded-lg border border-[var(--clinical-mid)] bg-[var(--clinical-light)] flex items-center justify-between gap-2">
+                        <span className="font-semibold text-[var(--ink-900)] truncate">• {inv}</span>
+                        <span className="text-[10px] bg-[var(--bg-surface)] border border-[var(--clinical-mid)] text-[var(--clinical)] px-1.5 py-0.5 rounded font-mono flex-shrink-0">
                           Evidence
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-[#667085] italic">No laboratory investigations or diagnostics recorded yet.</p>
+                  <p className="text-xs text-[var(--ink-500)] italic">No laboratory investigations or diagnostics recorded yet.</p>
                 )}
               </CardContent>
             </Card>

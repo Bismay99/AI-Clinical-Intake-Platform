@@ -454,12 +454,12 @@ function CareVoiceSession({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold text-[#172033]">CareVoice AI</h2>
-              <span className="text-[11px] font-medium bg-blue-50 text-[#155EEF] px-2 py-0.5 rounded-full border border-blue-100">
+              <h2 className="text-base font-semibold text-[var(--ink-900)]">CareVoice — Clinical Intake Assistant</h2>
+              <span className="text-[11px] font-medium bg-[var(--clinical-light)] text-[var(--clinical)] px-2 py-0.5 rounded-full border border-[var(--clinical-mid)]">
                 Connected to Clinical Engine
               </span>
             </div>
-            <p className="text-xs text-[#667085] mt-0.5">
+            <p className="text-xs text-[var(--ink-500)] mt-0.5">
               Speak naturally in Hindi (हिंदी), English, or Hinglish.
             </p>
           </div>
@@ -515,7 +515,7 @@ function CareVoiceSession({
               {isAnalyzingTurn ? (
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs font-semibold text-purple-700 animate-pulse">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600" />
-                  <span>Processing clinical response with PS47 engine…</span>
+                  <span>Processing clinical response with CareFlow AI engine…</span>
                 </div>
               ) : isSpeaking || mode === "speaking" ? (
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-[#155EEF]">
@@ -618,7 +618,7 @@ function CareVoiceSession({
               Start Interactive Voice Pre-Consultation
             </h3>
             <p className="text-xs text-[#667085]">
-              CareVoice conducts a real-time clinical dialogue and transmits each verified answer directly to the PS47 adaptive clinical engine.
+              CareVoice conducts a real-time clinical dialogue and transmits each verified answer directly to the CareFlow AI adaptive clinical engine.
             </p>
           </div>
         )}

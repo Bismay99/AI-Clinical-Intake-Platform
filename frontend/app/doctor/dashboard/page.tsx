@@ -145,7 +145,9 @@ export default function DoctorDashboard() {
               <Users className="w-4 h-4 text-[var(--clinical)]" />
               Recommended for Review
             </CardTitle>
-            <span className="text-xs text-[var(--ink-500)]">Operational prioritization</span>
+            <span className="text-xs text-[var(--ink-500)] font-medium">
+              AI-detected clinical signals — Clinician verification required
+            </span>
           </div>
         </CardHeader>
         <CardContent className="p-0">

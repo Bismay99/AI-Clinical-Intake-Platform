@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "PS47 — AI Clinical Intake",
+  title: "CareFlow AI — AI Clinical Intake",
   description: "AI-Powered Pre-Consultation Clinical Intake Platform",
 };
 

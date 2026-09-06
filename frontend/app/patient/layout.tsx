@@ -31,7 +31,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
       {/* Desktop sidebar */}
       <aside className="hidden md:flex flex-col w-60 bg-[var(--bg-surface)] border-r border-[var(--ink-200)] fixed inset-y-0 z-30">
         <div className="flex items-center gap-2 px-6 py-5 border-b border-[var(--ink-200)]">
-          <span className="text-[var(--clinical)] font-bold text-lg tracking-tight">PS47</span>
+          <span className="text-[var(--clinical)] font-bold text-lg tracking-tight">CareFlow AI</span>
           <span className="text-xs text-[var(--ink-500)] font-medium">Patient</span>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
@@ -61,7 +61,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
 
       {/* Mobile header */}
       <div className="md:hidden fixed top-0 inset-x-0 z-10 bg-[var(--bg-surface)] border-b border-[var(--ink-200)] px-4 h-14 flex items-center justify-between">
-        <span className="text-[var(--clinical)] font-bold text-lg">PS47</span>
+        <span className="text-[var(--clinical)] font-bold text-lg">CareFlow AI</span>
         <button onClick={handleLogout} className="text-[var(--ink-500)] hover:text-[var(--ink-900)] p-1 cursor-pointer">
           <LogOut className="w-5 h-5" />
         </button>

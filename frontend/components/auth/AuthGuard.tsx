@@ -84,11 +84,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   // Show secure loading state while checking session
   if (!hydrated || isInitializing) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F9FC]">
-        <span className="text-[#155EEF] font-bold text-2xl mb-4">PS47</span>
-        <div className="flex items-center gap-3 text-[#667085]">
-          <Spinner className="text-[#155EEF]" />
-          <span className="text-sm">Checking your secure session…</span>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--bg-canvas)]">
+        <span className="text-[var(--clinical)] font-bold text-2xl mb-4 tracking-tight">CareFlow AI</span>
+        <div className="flex items-center gap-3 text-[var(--ink-500)]">
+          <Spinner className="text-[var(--clinical)]" />
+          <span className="text-sm font-medium">Checking your secure session…</span>
         </div>
       </div>
     );

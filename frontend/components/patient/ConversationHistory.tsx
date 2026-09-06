@@ -13,13 +13,13 @@ export function ConversationHistory({ history }: Props) {
     <div className="space-y-4">
       {history.map((entry, i) => (
         <div key={i} className="space-y-3">
-          {/* Question from PS47 */}
+          {/* Question from CareFlow AI */}
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Stethoscope className="w-4 h-4 text-[#155EEF]" />
+            <div className="flex-shrink-0 w-8 h-8 rounded-md bg-[var(--clinical-light)] border border-[var(--clinical-mid)] flex items-center justify-center">
+              <Stethoscope className="w-4 h-4 text-[var(--clinical)]" />
             </div>
-            <div className="flex-1 bg-white border border-[#E4E7EC] rounded-xl px-4 py-3">
-              <p className="text-sm text-[#172033]">{entry.question}</p>
+            <div className="flex-1 bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg px-4 py-3">
+              <p className="text-sm text-[var(--ink-900)]">{entry.question}</p>
             </div>
           </div>
 

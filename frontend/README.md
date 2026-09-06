@@ -1,4 +1,4 @@
-# PS47 Frontend
+# CareFlow AI Frontend
 
 Next.js 16 frontend for the AI-Powered Pre-Consultation Clinical Intake Platform.
 
@@ -30,7 +30,7 @@ npm install
 
 From the project root:
 ```bash
-# Ensure the PS47 FastAPI backend is running on port 8000
+# Ensure the CareFlow AI FastAPI backend is running on port 8000
 uvicorn backend.main:app --reload
 ```
 

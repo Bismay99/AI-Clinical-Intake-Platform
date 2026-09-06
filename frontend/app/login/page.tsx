@@ -163,7 +163,7 @@ function LoginFormContent() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-white font-mono">PS47</span>
+                <span className="text-xl font-bold tracking-tight text-white">CareFlow AI</span>
                 <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-[#0D5C75]/30 border border-[#0D5C75]/40 text-[#B3DCF0]">
                   Clinical Workstation
                 </span>
@@ -242,7 +242,7 @@ function LoginFormContent() {
             <div className="inline-flex items-center justify-center w-11 h-11 rounded-lg bg-[var(--clinical-light)] text-[var(--clinical)] mb-2 border border-[var(--clinical-mid)]">
               <Lock className="w-5 h-5" />
             </div>
-            <h2 className="text-xl font-bold text-[var(--ink-900)]">Sign in to PS47</h2>
+            <h2 className="text-xl font-bold text-[var(--ink-900)]">Sign in to CareFlow AI</h2>
             <p className="text-xs text-[var(--ink-500)]">
               Access your clinical records or hospital workstation
             </p>
@@ -331,15 +331,16 @@ function LoginFormContent() {
             </Button>
           </form>
 
-          {/* Registration CTA */}
-          <div className="pt-2 text-center border-t border-[var(--ink-200)]">
+          {/* Registration & Doctor Workstation Links */}
+          <div className="pt-2 text-center border-t border-[var(--ink-200)] space-y-2">
             <p className="text-xs text-[var(--ink-500)]">
-              New patient?{" "}
+              Hospital doctor or staff member?{" "}
               <Link
-                href="/register"
-                className="font-semibold text-[var(--clinical)] hover:text-[var(--clinical-dark)] hover:underline"
+                href="/staff-login"
+                className="font-semibold text-[var(--clinical)] hover:text-[var(--clinical-dark)] hover:underline inline-flex items-center gap-1"
               >
-                Register an account
+                <span>Doctor Workstation Sign In</span>
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </p>
           </div>
@@ -361,7 +362,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-[#0D1117] text-white">
           <div className="flex items-center gap-3">
             <Stethoscope className="w-7 h-7 text-[#0D5C75] animate-pulse" />
-            <span className="text-lg font-bold font-mono tracking-wider">PS47</span>
+            <span className="text-lg font-bold tracking-wider">CareFlow AI</span>
           </div>
         </div>
       }

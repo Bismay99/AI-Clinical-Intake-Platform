@@ -117,7 +117,7 @@ export default function PatientReportDetailPage() {
             <div>
               <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--clinical)] mb-1">
                 <Stethoscope className="w-3.5 h-3.5" />
-                <span>PS47 Clinical Intake Platform</span>
+                <span>CareFlow AI Clinical Intake Platform</span>
               </div>
               <h1 className="text-2xl font-bold text-[var(--ink-900)]">
                 Pre-Consultation Clinical Report
@@ -483,7 +483,7 @@ export default function PatientReportDetailPage() {
 
         {/* Document Footer */}
         <div className="p-6 sm:p-8 border-t border-[var(--ink-200)] bg-[var(--bg-surface-2)] text-center text-xs text-[var(--ink-500)]">
-          <p className="font-medium text-[var(--ink-900)]">PS47 Clinical Intake Assistant · Hospital Information System Integration</p>
+          <p className="font-medium text-[var(--ink-900)]">CareFlow AI Clinical Intake Assistant · Hospital Information System Integration</p>
           <p className="mt-0.5">Report generated strictly from patient statements and verified documents.</p>
         </div>
       </div>

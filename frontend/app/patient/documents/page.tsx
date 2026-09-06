@@ -45,6 +45,7 @@ export default function PatientDocumentsPage() {
   const [selectedDocType, setSelectedDocType] = useState<string>("prescription");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [expandedDocIds, setExpandedDocIds] = useState<Record<string, boolean>>({});
+  const [filterType, setFilterType] = useState<string>("all");
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -354,20 +355,57 @@ export default function PatientDocumentsPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {documents.map((doc) => {
-                const isExpanded = !!expandedDocIds[doc.id];
-                const entityCount = doc.extracted_entities?.length ?? doc.entity_count ?? 0;
-                const isProcessing =
-                  doc.processing_status === "processing" || doc.processing_status === "uploaded";
-                const isFailed = doc.processing_status === "failed";
-                const isProcessed = doc.processing_status === "processed";
-
-                return (
-                  <div
-                    key={doc.id}
-                    className="border border-[var(--ink-200)] rounded-lg overflow-hidden bg-[var(--bg-surface)] hover:border-[var(--ink-400)] transition-colors"
+            <div className="space-y-4">
+              {/* Document Type Filter Tabs */}
+              <div className="flex items-center gap-1.5 flex-wrap pb-2 border-b border-[var(--ink-200)]">
+                {[
+                  { id: "all", label: "All Documents", count: documents.length },
+                  { id: "prescription", label: "Prescriptions (Rx)", count: documents.filter(d => d.document_type === "prescription").length },
+                  { id: "lab_report", label: "Lab Reports", count: documents.filter(d => d.document_type === "lab_report").length },
+                  { id: "discharge_summary", label: "Discharge Summaries", count: documents.filter(d => d.document_type === "discharge_summary").length },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setFilterType(tab.id)}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                      filterType === tab.id
+                        ? "bg-[var(--clinical)] text-white"
+                        : "bg-[var(--bg-surface-2)] text-[var(--ink-600)] hover:text-[var(--ink-900)] border border-[var(--ink-200)]"
+                    }`}
                   >
+                    <span>{tab.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      filterType === tab.id ? "bg-white/20 text-white" : "bg-[var(--ink-200)] text-[var(--ink-700)]"
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Document List */}
+              {documents.filter(d => filterType === "all" || d.document_type === filterType).length === 0 ? (
+                <div className="text-center py-8 text-xs text-[var(--ink-500)]">
+                  No documents found for this category.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {documents
+                    .filter(d => filterType === "all" || d.document_type === filterType)
+                    .map((doc) => {
+                      const isExpanded = !!expandedDocIds[doc.id];
+                      const entityCount = doc.extracted_entities?.length ?? doc.entity_count ?? 0;
+                      const isProcessing =
+                        doc.processing_status === "processing" || doc.processing_status === "uploaded";
+                      const isFailed = doc.processing_status === "failed";
+                      const isProcessed = doc.processing_status === "processed";
+
+                      return (
+                        <div
+                          key={doc.id}
+                          className="border border-[var(--ink-200)] rounded-lg overflow-hidden bg-[var(--bg-surface)] hover:border-[var(--ink-400)] transition-colors"
+                        >
                     {/* Main Row */}
                     <div className="px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
                       <div className="flex items-center gap-3 min-w-0">
@@ -503,6 +541,8 @@ export default function PatientDocumentsPage() {
               })}
             </div>
           )}
+        </div>
+      )}
         </CardContent>
       </Card>
     </div>
