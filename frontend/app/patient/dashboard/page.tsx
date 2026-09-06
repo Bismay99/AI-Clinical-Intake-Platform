@@ -15,17 +15,13 @@ import {
   ChevronRight,
   Activity,
   FolderOpen,
-  Sparkles,
   ShieldCheck,
   User,
-  ExternalLink,
   Upload,
   FileCheck2,
-  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
-import { StatusBadge } from "@/components/doctor/StatusBadge";
 import { getPatientProfile, getMyEncounters, createEncounter } from "@/services/patient.service";
 import { getPatientReports, getPatientDashboardMetrics, getPatientDocuments } from "@/services/report.service";
 import { ApiError } from "@/lib/api";
@@ -414,106 +410,135 @@ export default function PatientDashboard() {
 
       {/* ── TWO-COLUMN CLINICAL DASHBOARD WORKSPACE ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* LEFT COLUMN: 7 cols (PRIMARY & SECONDARY FEED) */}
-        <div className="lg:col-span-7 space-y-5">
-          {/* Recent Chronological Clinical Activity */}
-          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--ink-200)]">
+        {/* LEFT COLUMN: 7 cols — activity feed + reports */}
+        <div className="lg:col-span-7 space-y-4">
+
+          {/* ── RECENT CLINICAL ACTIVITY ── primary secondary content */}
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)] flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Recent Clinical Activity</span>
+                Recent Clinical Activity
               </h3>
-              <span className="text-[11px] text-[var(--ink-400)]">Chronological audit</span>
+              <Link
+                href="/patient/timeline"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--clinical)] hover:underline"
+              >
+                <Clock className="w-3 h-3" />
+                Full timeline →
+              </Link>
             </div>
 
             {recentActivities.length === 0 ? (
-              <p className="text-xs text-[var(--ink-500)] py-3 italic">
-                No recent activity recorded. Activity will automatically appear as you upload documents or complete pre-consultations.
+              <p className="text-xs text-[var(--ink-500)] px-4 py-4 italic">
+                No activity yet — activity appears automatically when you upload documents or complete intake.
               </p>
             ) : (
               <div className="divide-y divide-[var(--ink-200)]">
-                {recentActivities.map((act) => (
-                  <div key={act.id} className="py-2.5 flex items-start justify-between gap-3 text-xs">
-                    <div className="space-y-0.5 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[var(--ink-900)] truncate">{act.title}</span>
-                        <span className={`inline-block px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                {recentActivities.map((act, idx) => {
+                  const isFirst = idx === 0;
+                  return (
+                    <div
+                      key={act.id}
+                      className={`px-4 py-3 flex items-start justify-between gap-3 text-xs transition-colors ${
+                        isFirst ? "bg-[var(--clinical-light)]/30" : "hover:bg-[var(--bg-surface-2)]"
+                      }`}
+                    >
+                      {/* Status dot */}
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
+                          act.badgeVariant === "success" ? "bg-[var(--status-success-fg)]"
+                          : act.badgeVariant === "pending" ? "bg-[var(--status-pending-fg)]"
+                          : act.badgeVariant === "neutral" ? "bg-[var(--ink-400)]"
+                          : "bg-[var(--status-info-fg)]"
+                        }`} />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`font-semibold truncate ${isFirst ? "text-[var(--clinical)]" : "text-[var(--ink-900)]"}`}>
+                              {act.title}
+                              {isFirst && <span className="ml-1.5 text-[10px] font-bold text-[var(--clinical)] uppercase tracking-wider">· Latest</span>}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--ink-500)] truncate mt-0.5">{act.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
                           act.badgeVariant === "success"
                             ? "bg-[var(--status-success-bg)] text-[var(--status-success-fg)] border-[var(--status-success-bd)]"
                             : act.badgeVariant === "pending"
                             ? "bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border-[var(--status-pending-bd)]"
+                            : act.badgeVariant === "neutral"
+                            ? "bg-[var(--bg-surface-2)] text-[var(--ink-500)] border-[var(--ink-200)]"
                             : "bg-[var(--status-info-bg)] text-[var(--status-info-fg)] border-[var(--status-info-bd)]"
                         }`}>
                           {act.badgeText}
                         </span>
+                        <span className="text-[11px] font-mono text-[var(--ink-400)] hidden sm:inline">{act.date}</span>
+                        {act.link && (
+                          <Link href={act.link} className="text-[var(--clinical)] hover:text-[var(--clinical-dark)]" title="Open">
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
                       </div>
-                      <p className="text-[11px] text-[var(--ink-500)] truncate">{act.description}</p>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[11px] font-mono text-[var(--ink-400)]">{act.date}</span>
-                      {act.link && (
-                        <Link href={act.link} className="text-[var(--clinical)] hover:text-[var(--clinical-dark)]">
-                          <ExternalLink className="w-3 h-3" />
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
 
-          {/* Structured Clinical Reports Overview */}
-          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--ink-200)]">
+          {/* ── PRE-CONSULTATION REPORTS ── */}
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)] flex items-center gap-1.5">
                 <ClipboardList className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Pre-Consultation Reports</span>
+                Pre-Consultation Reports
               </h3>
-              <Link href="/patient/reports" className="text-xs font-semibold text-[var(--clinical)] hover:underline flex items-center gap-1">
-                <span>All reports ({reports.length})</span>
-                <ArrowRight className="w-3 h-3" />
+              <Link href="/patient/reports" className="text-[11px] font-semibold text-[var(--clinical)] hover:underline flex items-center gap-0.5">
+                All ({reports.length}) <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
 
             {isLoadingReports ? (
-              <div className="flex items-center gap-2 py-3 text-xs text-[var(--ink-500)]">
+              <div className="flex items-center gap-2 px-4 py-3 text-xs text-[var(--ink-500)]">
                 <Spinner /> Loading reports…
               </div>
             ) : reports.length === 0 ? (
-              <p className="text-xs text-[var(--ink-500)] py-3 italic">
-                No clinical reports generated yet. Reports are synthesized upon completing pre-consultation intake.
+              <p className="text-xs text-[var(--ink-500)] px-4 py-4 italic">
+                No reports yet — synthesized automatically after completing intake.
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-[var(--ink-200)]">
                 {reports.slice(0, 3).map((rep) => (
-                  <div
-                    key={rep.encounter_id}
-                    className="p-3 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface-2)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
+                  <div key={rep.encounter_id} className="px-4 py-3 flex items-center justify-between gap-3 text-xs hover:bg-[var(--bg-surface-2)] transition-colors">
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-[var(--ink-900)]">
-                          {rep.opd_department || "General OPD"} Report
+                          {rep.opd_department || "General OPD"}
                         </span>
-                        <span className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border flex-shrink-0 ${
                           rep.queue_status === "completed"
                             ? "bg-[var(--entity-verified-bg)] text-[var(--entity-verified-fg)] border-[var(--entity-verified-bd)]"
                             : "bg-[var(--entity-ai-bg)] text-[var(--entity-ai-fg)] border-[var(--entity-ai-bd)] border-dashed"
                         }`}>
-                          {rep.queue_status === "completed" ? "Doctor Verified" : "AI Extracted · Awaiting Doctor"}
+                          {rep.queue_status === "completed" ? "Doctor Verified" : "AI · Awaiting Review"}
                         </span>
                       </div>
                       <p className="text-[11px] text-[var(--ink-500)]">
-                        Date: {rep.consultation_date} · {rep.total_entities} clinical findings
+                        {rep.consultation_date} · {rep.total_entities} findings
+                        {rep.unreviewed_count > 0 && (
+                          <span className="ml-1.5 text-[var(--status-pending-fg)] font-semibold">
+                            · {rep.unreviewed_count} unverified
+                          </span>
+                        )}
                       </p>
                     </div>
                     <Link
                       href={`/patient/reports/${rep.encounter_id}`}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--clinical)] hover:underline self-start sm:self-auto"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--clinical)] hover:underline flex-shrink-0"
                     >
-                      <span>View Report</span>
-                      <ArrowRight className="w-3 h-3" />
+                      View <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
                 ))}
@@ -522,124 +547,118 @@ export default function PatientDashboard() {
           </section>
         </div>
 
-        {/* RIGHT COLUMN: 5 cols (DOCUMENTS PREVIEW, CLINICAL VERIFICATION DISCLOSURE, QUICK ACCESS) */}
-        <div className="lg:col-span-5 space-y-5">
-          {/* Medical Document Center Snapshot */}
-          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[var(--ink-200)]">
+        {/* RIGHT COLUMN: 5 cols — document center + governance */}
+        <div className="lg:col-span-5 space-y-4">
+
+          {/* ── DOCUMENT CENTER — compact supporting panel ── */}
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-700)] flex items-center gap-1.5">
                 <FolderOpen className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Document Center</span>
+                Document Center
               </h3>
-              <Link href="/patient/documents" className="text-xs font-semibold text-[var(--clinical)] hover:underline flex items-center gap-1">
-                <span>Manage ({documents.length})</span>
-                <ArrowRight className="w-3 h-3" />
+              <Link href="/patient/documents" className="text-[11px] font-semibold text-[var(--clinical)] hover:underline flex items-center gap-0.5">
+                Manage ({documents.length}) <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
 
             {isLoadingDocuments ? (
-              <div className="flex items-center gap-2 py-3 text-xs text-[var(--ink-500)]">
-                <Spinner /> Loading documents…
+              <div className="flex items-center gap-2 px-4 py-3 text-xs text-[var(--ink-500)]">
+                <Spinner /> Loading…
               </div>
             ) : documents.length === 0 ? (
-              <div className="text-center py-4 space-y-2 border border-dashed border-[var(--ink-200)] rounded-md">
-                <FileText className="w-6 h-6 mx-auto text-[var(--ink-400)]" />
-                <p className="text-xs text-[var(--ink-500)]">No prescriptions or lab reports uploaded yet.</p>
+              <div className="px-4 py-5 text-center space-y-2">
+                <FileText className="w-5 h-5 mx-auto text-[var(--ink-400)]" />
+                <p className="text-xs text-[var(--ink-500)]">No documents uploaded yet.</p>
                 <Link href="/patient/documents">
-                  <Button size="xs" variant="secondary" className="cursor-pointer">
-                    <Upload className="w-3 h-3 mr-1" /> Upload First Document
+                  <Button size="xs" variant="secondary" className="cursor-pointer text-xs">
+                    <Upload className="w-3 h-3 mr-1" /> Upload
                   </Button>
                 </Link>
               </div>
             ) : (
-              <div className="space-y-2">
-                {documents.slice(0, 3).map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="p-2.5 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface-2)] flex items-center justify-between gap-2 text-xs"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <FileText className="w-3.5 h-3.5 text-[var(--clinical)] flex-shrink-0" />
-                      <div className="truncate">
-                        <p className="font-semibold text-[var(--ink-900)] truncate">
-                          {doc.original_filename || doc.filename || "Document"}
-                        </p>
-                        <p className="text-[10px] text-[var(--ink-500)] capitalize">
-                          {doc.document_type.replace(/_/g, " ")}
-                        </p>
+              <div className="divide-y divide-[var(--ink-200)]">
+                {documents.slice(0, 4).map((doc) => {
+                  const statusCfg =
+                    doc.processing_status === "processed"
+                      ? { dot: "bg-[var(--status-success-fg)]", label: "Processed", labelColor: "text-[var(--status-success-fg)]" }
+                      : doc.processing_status === "failed"
+                      ? { dot: "bg-[var(--status-error-fg)]", label: "Failed", labelColor: "text-[var(--status-error-fg)]" }
+                      : { dot: "bg-[var(--status-pending-fg)]", label: "Extracting…", labelColor: "text-[var(--status-pending-fg)]" };
+                  return (
+                    <div key={doc.id} className="px-4 py-2.5 flex items-center justify-between gap-3 text-xs hover:bg-[var(--bg-surface-2)] transition-colors">
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
+                        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${statusCfg.dot}`} />
+                        <div className="min-w-0">
+                          <p className="font-medium text-[var(--ink-900)] truncate leading-snug">
+                            {doc.original_filename || doc.filename || "Medical Document"}
+                          </p>
+                          <p className="text-[10px] text-[var(--ink-500)] capitalize leading-snug">
+                            {doc.document_type.replace(/_/g, " ")}
+                            {doc.processing_status === "processed" && (doc.extracted_entity_count ?? doc.entity_count) != null
+                              ? ` · ${doc.extracted_entity_count ?? doc.entity_count} entities`
+                              : ""}
+                          </p>
+                        </div>
                       </div>
+                      <span className={`text-[10px] font-semibold flex-shrink-0 ${statusCfg.labelColor}`}>
+                        {statusCfg.label}
+                      </span>
                     </div>
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${
-                      doc.processing_status === "processed"
-                        ? "bg-[var(--status-success-bg)] text-[var(--status-success-fg)] border border-[var(--status-success-bd)]"
-                        : doc.processing_status === "failed"
-                        ? "bg-[var(--status-error-bg)] text-[var(--status-error-fg)] border border-[var(--status-error-bd)]"
-                        : "bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border border-[var(--status-pending-bd)]"
-                    }`}>
-                      {doc.processing_status === "processed" ? "Processed" : doc.processing_status === "failed" ? "Failed" : "Extracting"}
-                    </span>
+                  );
+                })}
+                {documents.length > 4 && (
+                  <div className="px-4 py-2 text-[11px] text-[var(--ink-500)]">
+                    +{documents.length - 4} more ·{" "}
+                    <Link href="/patient/documents" className="text-[var(--clinical)] hover:underline">View all</Link>
                   </div>
-                ))}
+                )}
               </div>
             )}
-            <p className="text-[10px] text-[var(--ink-400)] pt-1">
-              Supported: Prescriptions, Blood/Lab Tests, Discharge Summaries (PDF/JPEG/PNG).
-            </p>
-          </section>
 
-          {/* AI Clinical Governance Disclosure */}
-          <section className="rounded-lg bg-[var(--clinical-light)]/40 border border-[var(--clinical-mid)] p-3.5 space-y-2 text-xs text-[var(--ink-700)]">
-            <div className="flex items-center gap-1.5 font-bold text-[var(--clinical)] text-xs">
-              <ShieldCheck className="w-4 h-4 text-[var(--clinical)]" />
-              <span>AI Extraction &amp; Physician Governance</span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-[var(--ink-700)]">
-              CareFlow AI structures your answers and documents to save time in the clinic. All findings remain marked as unverified until explicitly confirmed by your doctor.
-            </p>
-            <div className="pt-1 flex items-center gap-3 text-[10px] font-semibold">
-              <span className="inline-flex items-center gap-1 text-[var(--entity-ai-fg)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--entity-ai-fg)]" /> AI Extracted
-              </span>
-              <span className="inline-flex items-center gap-1 text-[var(--entity-verified-fg)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--entity-verified-fg)]" /> Doctor Verified
-              </span>
+            <div className="px-4 py-2 border-t border-[var(--ink-200)] bg-[var(--bg-surface-2)]">
+              <p className="text-[10px] text-[var(--ink-400)]">
+                Accepted: Prescriptions, Lab Reports, Discharge Summaries (PDF / JPEG / PNG)
+              </p>
             </div>
           </section>
 
-          {/* Quick Access Navigation Strip */}
-          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-3 space-y-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] block">
-              Quick Portals
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <Link
-                href="/patient/intake"
-                className="p-2.5 rounded-md border border-[var(--ink-200)] hover:border-[var(--clinical)] hover:bg-[var(--clinical-light)]/30 transition-colors flex items-center gap-2 text-[var(--ink-800)] font-medium"
-              >
-                <Activity className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>CareVoice</span>
-              </Link>
-              <Link
-                href="/patient/documents"
-                className="p-2.5 rounded-md border border-[var(--ink-200)] hover:border-[var(--clinical)] hover:bg-[var(--clinical-light)]/30 transition-colors flex items-center gap-2 text-[var(--ink-800)] font-medium"
-              >
-                <FolderOpen className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Documents</span>
-              </Link>
-              <Link
-                href="/patient/reports"
-                className="p-2.5 rounded-md border border-[var(--ink-200)] hover:border-[var(--clinical)] hover:bg-[var(--clinical-light)]/30 transition-colors flex items-center gap-2 text-[var(--ink-800)] font-medium"
-              >
-                <ClipboardList className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Reports</span>
-              </Link>
-              <Link
-                href="/patient/profile"
-                className="p-2.5 rounded-md border border-[var(--ink-200)] hover:border-[var(--clinical)] hover:bg-[var(--clinical-light)]/30 transition-colors flex items-center gap-2 text-[var(--ink-800)] font-medium"
-              >
-                <User className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Profile</span>
-              </Link>
+          {/* ── AI EXTRACTION & PHYSICIAN GOVERNANCE — concise clinical notice ── */}
+          <section className="border border-[var(--clinical-mid)] rounded-lg overflow-hidden">
+            <div className="bg-[var(--clinical-light)] px-4 py-2.5 flex items-center gap-2 border-b border-[var(--clinical-mid)]">
+              <ShieldCheck className="w-3.5 h-3.5 text-[var(--clinical)] flex-shrink-0" />
+              <span className="text-xs font-bold text-[var(--clinical)]">AI Extraction &amp; Physician Governance</span>
+            </div>
+            <div className="px-4 py-3 space-y-2.5 bg-[var(--bg-surface)] text-xs text-[var(--ink-700)]">
+              <p className="leading-relaxed">
+                CareFlow AI structures your intake into clinical findings. All AI-extracted data is{" "}
+                <strong className="text-[var(--ink-900)]">unverified</strong> until explicitly confirmed by your attending physician. AI findings are not diagnoses.
+              </p>
+              <div className="flex items-center gap-4 text-[11px] pt-0.5">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-sm border border-dashed border-[var(--entity-ai-fg)] bg-[var(--entity-ai-bg)]" />
+                  <span className="text-[var(--entity-ai-fg)] font-semibold">AI Extracted</span>
+                </span>
+                <span className="text-[var(--ink-300)]">→</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-sm bg-[var(--entity-verified-bg)] border border-[var(--entity-verified-bd)]" />
+                  <span className="text-[var(--entity-verified-fg)] font-semibold">Doctor Verified</span>
+                </span>
+              </div>
+              {reports.length > 0 && (() => {
+                const unreviewedTotal = reports.reduce((sum, r) => sum + (r.unreviewed_count ?? 0), 0);
+                if (unreviewedTotal > 0) return (
+                  <p className="text-[11px] text-[var(--ink-500)] border-t border-[var(--ink-200)] pt-2">
+                    <span className="font-semibold text-[var(--status-pending-fg)]">{unreviewedTotal}</span> finding{unreviewedTotal !== 1 ? "s" : ""} awaiting physician review.
+                  </p>
+                );
+                if (reports.some((r) => r.queue_status === "completed")) return (
+                  <p className="text-[11px] text-[var(--status-success-fg)] font-semibold border-t border-[var(--ink-200)] pt-2 flex items-center gap-1">
+                    <FileCheck2 className="w-3 h-3" /> All submitted findings reviewed.
+                  </p>
+                );
+                return null;
+              })()}
             </div>
           </section>
         </div>
@@ -647,3 +666,4 @@ export default function PatientDashboard() {
     </div>
   );
 }
+
