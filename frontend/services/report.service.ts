@@ -1,4 +1,4 @@
-import { apiGet, apiPostForm } from "@/lib/api";
+import { apiGet, apiPostForm, apiDelete } from "@/lib/api";
 import type {
   PatientReportSummaryItem,
   PatientReportDetailResponse,
@@ -6,6 +6,17 @@ import type {
   PatientDashboardMetrics,
 } from "@/types/report";
 import type { DocumentUploadResponse } from "@/types/intake";
+
+/** DELETE /patients/documents/{document_id} */
+export async function deletePatientDocument(documentId: string): Promise<{
+  ok: boolean;
+  document_id: string;
+  message: string;
+}> {
+  return apiDelete<{ ok: boolean; document_id: string; message: string }>(
+    `/patients/documents/${documentId}`
+  );
+}
 
 /** GET /patients/reports */
 export async function getPatientReports(): Promise<PatientReportSummaryItem[]> {

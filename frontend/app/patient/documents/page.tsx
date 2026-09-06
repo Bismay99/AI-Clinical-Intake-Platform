@@ -15,12 +15,14 @@ import {
   HardDrive,
   FileCheck2,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ApiError } from "@/lib/api";
-import { getPatientDocuments, uploadPatientDocument } from "@/services/report.service";
+import { getPatientDocuments, uploadPatientDocument, deletePatientDocument } from "@/services/report.service";
 import { getMyEncounters, createEncounter } from "@/services/patient.service";
 import type { PatientDocumentItem } from "@/types/report";
 
@@ -48,6 +50,38 @@ export default function PatientDocumentsPage() {
   const [filterType, setFilterType] = useState<string>("all");
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [deleteTargetDoc, setDeleteTargetDoc] = useState<PatientDocumentItem | null>(null);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+
+  // Delete document mutation
+  const deleteMutation = useMutation({
+    mutationFn: (documentId: string) => deletePatientDocument(documentId),
+    onMutate: (documentId: string) => {
+      setIsDeletingId(documentId);
+      setUploadError(null);
+      setUploadSuccess(null);
+    },
+    onSuccess: () => {
+      setIsDeletingId(null);
+      setDeleteTargetDoc(null);
+      setUploadSuccess("Document successfully deleted from your medical record.");
+      qc.invalidateQueries({ queryKey: ["patient", "documents"] });
+      qc.invalidateQueries({ queryKey: ["patient", "metrics"] });
+      qc.invalidateQueries({ queryKey: ["patient", "reports"] });
+      qc.invalidateQueries({ queryKey: ["patient", "encounters"] });
+    },
+    onError: (err: unknown) => {
+      setIsDeletingId(null);
+      setDeleteTargetDoc(null);
+      if (err instanceof ApiError) {
+        setUploadError(err.detail || "Failed to delete document.");
+      } else if (err instanceof Error) {
+        setUploadError(err.message || "Failed to delete document.");
+      } else {
+        setUploadError("Could not delete document. Please try again.");
+      }
+    },
+  });
 
   // 1. Fetch patient documents with automatic polling when background processing is active
   const {
@@ -470,6 +504,22 @@ export default function PatientDocumentsPage() {
                         >
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
+
+                        {/* Delete Document Button */}
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTargetDoc(doc)}
+                          disabled={isDeletingId === doc.id}
+                          className="p-1.5 rounded-md border border-[var(--ink-200)] hover:bg-[var(--status-error-bg)] hover:text-[var(--status-error-fg)] hover:border-[var(--status-error-bd)] text-[var(--ink-500)] transition-colors cursor-pointer disabled:opacity-50"
+                          title="Delete document"
+                          aria-label={`Delete ${doc.original_filename || "document"}`}
+                        >
+                          {isDeletingId === doc.id ? (
+                            <Spinner />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                       </div>
                     </div>
 
@@ -545,6 +595,31 @@ export default function PatientDocumentsPage() {
       )}
         </CardContent>
       </Card>
+
+      {/* Confirmation Modal for Document Deletion */}
+      <ConfirmDialog
+        isOpen={deleteTargetDoc !== null}
+        title="Delete this document?"
+        description={
+          deleteTargetDoc
+            ? `Are you sure you want to delete "${deleteTargetDoc.original_filename || deleteTargetDoc.filename || "this document"}"? This will remove the uploaded file and any clinical findings extracted from it from your active consultation. This action cannot be undone.`
+            : "Are you sure you want to delete this document?"
+        }
+        confirmText="Delete Document"
+        cancelText="Cancel"
+        isDestructive={true}
+        isLoading={isDeletingId !== null}
+        onConfirm={() => {
+          if (deleteTargetDoc) {
+            deleteMutation.mutate(deleteTargetDoc.id);
+          }
+        }}
+        onCancel={() => {
+          if (!isDeletingId) {
+            setDeleteTargetDoc(null);
+          }
+        }}
+      />
     </div>
   );
 }

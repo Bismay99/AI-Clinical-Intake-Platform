@@ -16,6 +16,9 @@ Ownership:
   - No LLM call is made: this router is a clean read view over existing canonical DB records.
 """
 
+import os
+import json
+import logging
 from datetime import datetime
 from typing import List, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -30,6 +33,7 @@ from backend.models.extracted_entity import ExtractedEntity, VerificationStatus,
 from backend.models.clinical_summary import ClinicalSummary
 from backend.models.timeline_event import TimelineEvent
 from backend.models.document import Document
+from backend.models.audit_log import AuditLog
 from backend.auth.dependencies import get_current_user
 from backend.services.ownership import (
     get_patient_for_user,
@@ -48,6 +52,7 @@ from backend.schemas.report import (
 from ai_orchestration.clinical_schema import get_schema
 
 router = APIRouter(prefix="/patients", tags=["patient-reports"])
+logger = logging.getLogger(__name__)
 
 
 def _require_patient_user(current_user: User = Depends(get_current_user)) -> User:
@@ -525,3 +530,171 @@ def get_dashboard_metrics(
         documents_count=documents_count,
         reports_count=reports_count,
     )
+
+
+@router.delete("/documents/{document_id}", status_code=status.HTTP_200_OK)
+def delete_patient_document(
+    document_id: str,
+    current_user: User = Depends(_require_patient_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Deletes an uploaded document owned by the patient:
+      1. Ownership verification: JWT -> current_user -> Patient -> owned Encounter.
+         Anti-enumeration: 404 if not found or belongs to another patient.
+      2. Clinical immutability guard: 409 if encounter.queue_status == EncounterStatus.completed.
+      3. Doctor verification guard: 409 if any extracted entity linked to this document
+         has verification_status in (accepted, edited, rejected).
+      4. Identifies and removes ExtractedEntity records originating from this document.
+         Shared information from other documents or intake turns remains untouched.
+      5. Cascades to TimelineEvent records referencing the removed entities.
+      6. Recalculates ClinicalSummary if present for this encounter.
+      7. Deletes Document database record.
+      8. Logs an immutable AuditLog event ('document.delete').
+      9. Commits DB transaction.
+      10. Cleans up physical file on disk (or raises 500 if storage removal fails).
+    """
+    patient = get_patient_for_user(current_user, db)
+
+    encounter_ids = [
+        enc.id for enc in db.query(Encounter.id).filter(Encounter.patient_id == patient.id).all()
+    ]
+
+    doc = (
+        db.query(Document)
+        .filter(
+            Document.id == document_id,
+            (Document.patient_id == patient.id) | (Document.encounter_id.in_(encounter_ids))
+        )
+        .first()
+    )
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found.",
+        )
+
+    # Clinical immutability guard: Completed encounter check
+    encounter = db.query(Encounter).filter(Encounter.id == doc.encounter_id).first()
+    if encounter and encounter.queue_status == EncounterStatus.completed:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This document belongs to a completed consultation and cannot be deleted.",
+        )
+
+    # Doctor review guard: check if any entity linked to this document has been reviewed
+    doc_entities = (
+        db.query(ExtractedEntity)
+        .filter(
+            (ExtractedEntity.document_id == doc.id)
+            | (
+                (ExtractedEntity.source_type == SourceType.document)
+                & (ExtractedEntity.source_id == doc.id)
+            )
+        )
+        .all()
+    )
+
+    reviewed_entities = [
+        e for e in doc_entities
+        if e.verification_status in (
+            VerificationStatus.accepted,
+            VerificationStatus.edited,
+            VerificationStatus.rejected,
+        )
+    ]
+    if reviewed_entities:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This document contains clinical findings that have already been reviewed by a clinician and cannot be deleted.",
+        )
+
+    storage_ref = doc.storage_ref
+    entity_ids = [e.id for e in doc_entities]
+
+    # Delete child timeline events
+    if entity_ids:
+        db.query(TimelineEvent).filter(
+            TimelineEvent.source_entity_id.in_(entity_ids)
+        ).delete(synchronize_session=False)
+
+    # Delete extracted entities
+    if entity_ids:
+        db.query(ExtractedEntity).filter(
+            ExtractedEntity.id.in_(entity_ids)
+        ).delete(synchronize_session=False)
+
+    # Delete document record
+    db.delete(doc)
+
+    # Recalculate ClinicalSummary if present for this encounter (Requirement 6)
+    if encounter:
+        remaining_entities = (
+            db.query(ExtractedEntity)
+            .filter(
+                ExtractedEntity.encounter_id == encounter.id,
+                ~ExtractedEntity.id.in_(entity_ids) if entity_ids else True,
+            )
+            .all()
+        )
+        summary = (
+            db.query(ClinicalSummary)
+            .filter(ClinicalSummary.encounter_id == encounter.id)
+            .first()
+        )
+        if summary:
+            if remaining_entities:
+                lines = []
+                used_fields = []
+                for entity in remaining_entities:
+                    flag = " [LOW CONFIDENCE — needs review]" if entity.low_confidence_flag else ""
+                    lines.append(f"{entity.field_name}: {entity.value}{flag}")
+                    used_fields.append(entity.field_name)
+                try:
+                    from ai_orchestration.services.llm import generate_summary_text
+                    summary.summary_text = generate_summary_text(lines)
+                except Exception as exc:
+                    logger.warning("Summary text regeneration skipped: %s", exc)
+                summary.used_entity_fields = used_fields
+                summary.regenerated_at = datetime.utcnow()
+            else:
+                summary.summary_text = "No clinical facts recorded."
+                summary.used_entity_fields = []
+                summary.regenerated_at = datetime.utcnow()
+
+    # Append immutable audit event (Requirement 11)
+    audit = AuditLog(
+        user_id=current_user.id,
+        action="document.delete",
+        target_entity_type="document",
+        target_entity_id=doc.id,
+        detail=json.dumps({
+            "document_id": doc.id,
+            "original_filename": doc.original_filename,
+            "encounter_id": encounter.id if encounter else None,
+            "patient_id": patient.id,
+            "removed_entities_count": len(entity_ids),
+        }),
+    )
+    db.add(audit)
+
+    # Commit DB changes transactionally
+    db.commit()
+
+    # Safe physical storage cleanup (Requirement 8)
+    if storage_ref and os.path.exists(storage_ref):
+        try:
+            os.remove(storage_ref)
+        except Exception as exc:
+            logger.error("Failed to delete physical storage file %s: %s", storage_ref, exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database records were cleaned up, but physical storage deletion failed: {exc}",
+            )
+
+    return {
+        "ok": True,
+        "document_id": document_id,
+        "message": "Document and associated AI clinical facts deleted successfully.",
+    }
+

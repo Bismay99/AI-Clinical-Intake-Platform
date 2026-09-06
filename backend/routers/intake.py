@@ -366,6 +366,26 @@ def process_document_background(
 
         brain_response = handle_document(brain_request)
 
+        # ── RACE CONDITION GUARD (Section 9) ──
+        # Double check document existence and active status right before persistence.
+        # If patient deleted document while OCR or Gemini extraction was running, active_doc will be None.
+        active_doc = db.query(Document).filter(Document.id == document_id).first()
+        if not active_doc:
+            logger.info(
+                "Background document processor: document %s was deleted during processing. Aborting entity persistence.",
+                document_id,
+            )
+            return
+
+        # Double check encounter queue status (must not be completed)
+        encounter = db.query(Encounter).filter(Encounter.id == encounter_id).first()
+        if not encounter or encounter.queue_status == EncounterStatus.completed:
+            logger.warning(
+                "Background document processor: encounter %s is completed or missing. Aborting entity persistence.",
+                encounter_id,
+            )
+            return
+
         for contract_entity in brain_response.draft_entities:
             db_entity = contract_entity_to_db(
                 contract=contract_entity,
@@ -374,8 +394,8 @@ def process_document_background(
             )
             db.add(db_entity)
 
-        doc.processing_status = "processed"
-        doc.processing_error = None
+        active_doc.processing_status = "processed"
+        active_doc.processing_error = None
         db.commit()
         logger.info(
             "Background extraction complete for document %s: %d entities persisted",
