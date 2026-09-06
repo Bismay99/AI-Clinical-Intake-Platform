@@ -78,6 +78,9 @@ class AssignResponse(BaseModel):
 # ---------------------------------------------------------------------------
 class SummaryDetailResponse(BaseModel):
     encounter_id: str
+    patient_id: Optional[str] = None
+    patient_name: Optional[str] = None
+    opd_department: Optional[str] = None
     summary_id: str
     summary_text: str
     generated_at: str

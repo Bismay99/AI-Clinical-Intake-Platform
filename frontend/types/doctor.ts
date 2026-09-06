@@ -21,6 +21,9 @@ export interface DoctorQueueResponse { doctor_user_id: string; items: QueueItem[
 export interface AssignResponse { encounter_id: string; doctor_user_id: string; queue_status: string; message: string; }
 export interface SummaryDetailResponse {
   encounter_id: string;
+  patient_id?: string | null;
+  patient_name?: string | null;
+  opd_department?: string | null;
   summary_id: string;
   summary_text: string;
   generated_at: string;

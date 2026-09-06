@@ -272,8 +272,8 @@ export default function DoctorPatientsPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-[#667085]">
-                        <span className="font-mono">UID: {item.patient_id.slice(0, 8)}…</span>
+                      <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-[#667085]">
+                        <span className="font-mono select-all" title={item.patient_id}>Patient UID: {item.patient_id}</span>
                         {item.opd_department && <span>{item.opd_department}</span>}
                         <span>{new Date(item.updated_at).toLocaleDateString("en-IN")}</span>
                       </div>

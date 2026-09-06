@@ -278,8 +278,12 @@ def get_summary(
         for d in documents
     ]
 
+    patient = encounter.patient
     return SummaryDetailResponse(
         encounter_id=encounter.id,
+        patient_id=patient.id if patient else encounter.patient_id,
+        patient_name=patient.full_name if patient else "Patient Record",
+        opd_department=encounter.opd_department,
         summary_id=summary.id,
         summary_text=summary.summary_text,
         generated_at=summary.generated_at.isoformat(),
@@ -591,7 +595,7 @@ def search_patient(
     db: Session = Depends(get_db),
 ):
     """
-    Looks up a patient by their Patient.id (UUID / patient UID).
+    Looks up a patient by their Patient.id (UUID / patient UID) or an Encounter ID (consultation token).
 
     Authorization: the doctor must have at least one encounter assigned to them
     for this patient (encounter.patient_id == patient.id AND
@@ -600,11 +604,31 @@ def search_patient(
     This prevents UID-based enumeration of the entire patient database.
     Patient UID is an identifier, not an access credential.
     """
-    # Look up patient by id — do not reveal whether they exist on 404
-    patient = db.query(Patient).filter(Patient.id == patient_uid).first()
+    clean_uid = patient_uid.strip().lower()
+
+    # 1. Look up patient by canonical patient ID
+    patient = db.query(Patient).filter(Patient.id == clean_uid).first()
+    matched_encounter = None
+
+    # 2. Look up patient by encounter ID (consultation token / encounter UID)
     if patient is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="No authorized patient found for this UID.")
+        matched_encounter = db.query(Encounter).filter(Encounter.id == clean_uid).first()
+        if matched_encounter and matched_encounter.patient:
+            patient = matched_encounter.patient
+
+    # 3. Look up patient by User ID
+    if patient is None:
+        patient = db.query(Patient).filter(Patient.user_id == clean_uid).first()
+
+    # 4. Look up patient by hospital_identifier if available
+    if patient is None and hasattr(Patient, "hospital_identifier"):
+        patient = db.query(Patient).filter(Patient.hospital_identifier == clean_uid).first()
+
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No authorized patient found for this UID.",
+        )
 
     # Verify authorization: at least one encounter for this patient is assigned to this doctor
     authorized_encounters = (
@@ -618,8 +642,14 @@ def search_patient(
     )
     if not authorized_encounters:
         # Doctor has no assigned encounter for this patient — 404 (anti-enumeration)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="No authorized patient found for this UID.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No authorized patient found for this UID.",
+        )
+
+    # Prioritize matched encounter at the top if specific encounter was searched
+    if matched_encounter and matched_encounter in authorized_encounters:
+        authorized_encounters = [matched_encounter] + [e for e in authorized_encounters if e.id != matched_encounter.id]
 
     encounter_summaries: List[EncounterSummary] = []
     for enc in authorized_encounters:

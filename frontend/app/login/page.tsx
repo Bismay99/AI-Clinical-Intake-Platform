@@ -13,8 +13,6 @@ import {
   EyeOff,
   AlertCircle,
   Building2,
-  CheckCircle2,
-  Sparkles,
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";

@@ -10,6 +10,7 @@ export interface PatientEntityEvidence {
   source_location?: string | null;
   source_document_id?: string | null;
   source_document_name?: string | null;
+  evidence?: string[] | null;
   reviewed_by?: string | null;
   reviewed_at?: string | null;
 }
@@ -25,6 +26,7 @@ export interface PatientDocumentItem {
   upload_timestamp: string;
   uploaded_at?: string | null;
   processing_status: string; // 'uploaded' | 'processing' | 'processed' | 'failed'
+  processing_error?: string | null;
   file_size?: number | null;
   mime_type?: string | null;
   entity_count: number;

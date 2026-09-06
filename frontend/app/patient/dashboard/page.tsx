@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  LayoutDashboard,
   Plus,
   ArrowRight,
   AlertCircle,
@@ -13,16 +12,12 @@ import {
   FileText,
   ClipboardList,
   Calendar,
-  Stethoscope,
   ChevronRight,
-  Sparkles,
   Activity,
-  ShieldCheck,
   FolderOpen,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { getPatientProfile, getMyEncounters, createEncounter } from "@/services/patient.service";
 import { getPatientReports, getPatientDashboardMetrics } from "@/services/report.service";
@@ -213,7 +208,7 @@ export default function PatientDashboard() {
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <Link href={`/patient/reports/${primaryActiveEncounter.id}`}>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-xs font-semibold px-6 cursor-pointer">
+                <Button size="lg" variant="secondary" className="w-full sm:w-auto text-xs font-semibold px-6 cursor-pointer">
                   <span>View Submitted Summary</span>
                   <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </Button>

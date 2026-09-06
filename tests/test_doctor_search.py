@@ -158,6 +158,46 @@ def test_search_authorized_patient_returns_card(client: TestClient):
     assert data["encounters"][0]["encounter_id"] == enc["id"]
 
 
+def test_search_by_encounter_uid_resolves_patient_for_assigned_doctor(client: TestClient):
+    """
+    REGRESSION TEST:
+    REAL PATIENT UID + REAL ENCOUNTER + assigned_doctor_id == authenticated doctor
+    = GET /doctor/patients/search?patient_uid={encounter_id} -> 200 OK.
+    Verifies that searching by an assigned encounter ID (consultation token) resolves
+    the patient and returns the correct patient and encounter details.
+    """
+    pt = register_and_login(client, "enc_search_pt@test.com", role="patient", full_name="Encounter Search Patient")
+    profile = create_patient_profile(client, pt, full_name="Encounter Search Patient")
+    patient_id = profile["id"]
+    enc = create_encounter(client, pt, dept="Cardiology")
+    submit_intake(client, pt, enc["id"])
+    encounter_id = enc["id"]
+
+    # Assigned doctor
+    dt = register_and_login(client, "assigned_doc@test.com", role="doctor", full_name="Dr Assigned")
+    assign_encounter(client, dt, encounter_id)
+
+    # 1. Search using Encounter ID
+    r = client.get(f"/doctor/patients/search?patient_uid={encounter_id}", headers=auth_headers(dt))
+    assert r.status_code == 200, f"Expected 200 when searching by encounter ID, got {r.status_code}: {r.text}"
+    data = r.json()
+    assert data["patient_id"] == patient_id
+    assert data["patient_name"] == "Encounter Search Patient"
+    assert any(e["encounter_id"] == encounter_id for e in data["encounters"])
+
+    # 2. Search using Encounter ID with leading/trailing whitespace and uppercase
+    padded_uid = f"  {encounter_id.upper()}  "
+    r_padded = client.get(f"/doctor/patients/search?patient_uid={padded_uid}", headers=auth_headers(dt))
+    assert r_padded.status_code == 200
+    assert r_padded.json()["patient_id"] == patient_id
+
+    # 3. Unassigned doctor searching same encounter ID gets 404 (Anti-enumeration)
+    other_dt = register_and_login(client, "unassigned_doc@test.com", role="doctor", full_name="Dr Other")
+    r_unauth = client.get(f"/doctor/patients/search?patient_uid={encounter_id}", headers=auth_headers(other_dt))
+    assert r_unauth.status_code == 404
+    assert "No authorized patient found" in r_unauth.json()["detail"]
+
+
 # -- Test: /doctor/available ---------------------------------------------------
 
 def test_available_requires_doctor_jwt(client: TestClient):

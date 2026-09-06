@@ -6,7 +6,6 @@ import {
   Upload,
   CheckCircle2,
   AlertCircle,
-  Clock,
   FolderOpen,
   Sparkles,
   ChevronDown,
@@ -16,17 +15,14 @@ import {
   HardDrive,
   FileCheck2,
   Plus,
-  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
-import { Badge } from "@/components/ui/Badge";
 import { ApiError } from "@/lib/api";
 import { getPatientDocuments, uploadPatientDocument } from "@/services/report.service";
 import { getMyEncounters, createEncounter } from "@/services/patient.service";
-import type { PatientDocumentItem, PatientEntityEvidence } from "@/types/report";
-import type { EncounterResponse } from "@/types/patient";
+import type { PatientDocumentItem } from "@/types/report";
 
 const DOC_TYPES = [
   { id: "prescription", label: "Prescription (Rx)" },
@@ -56,7 +52,6 @@ export default function PatientDocumentsPage() {
   const {
     data: documents = [],
     isLoading: isLoadingDocs,
-    error: docsError,
   } = useQuery({
     queryKey: ["patient", "documents"],
     queryFn: getPatientDocuments,

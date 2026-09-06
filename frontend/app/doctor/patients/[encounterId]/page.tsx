@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import {
   FileText, History, Clock, FileCheck, CheckCircle2,
   AlertTriangle, ShieldCheck, FolderOpen, FlaskConical,
-  ExternalLink, ChevronDown, ChevronUp, FileCheck2,
+  ChevronDown, ChevronUp, FileCheck2,
 } from "lucide-react";
 import type { VerifyAction, DocumentDetailResponse } from "@/types/doctor";
 
@@ -120,10 +120,10 @@ export default function EncounterReviewPage() {
     <div className="space-y-6 pb-16">
       {/* Patient Header */}
       <PatientHeader
-        patientName="Patient Record"
-        patientId={summary.encounter_id}
+        patientName={summary.patient_name || "Patient Record"}
+        patientId={summary.patient_id || summary.encounter_id}
         encounterId={summary.encounter_id}
-        department="General OPD"
+        department={summary.opd_department || "General OPD"}
         status={finalizeSuccess ? "completed" : "ready_for_review"}
         backHref="/doctor/dashboard"
       />
