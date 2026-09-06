@@ -606,42 +606,38 @@ export default function PatientDashboard() {
             </div>
           </section>
 
-          {/* Quick Access Navigation Strip */}
-          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg p-3 space-y-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)] block">
-              Quick Portals
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <Link
-                href="/patient/intake"
-                className="p-2.5 rounded-md border border-[var(--ink-200)] hover:border-[var(--clinical)] hover:bg-[var(--clinical-light)]/30 transition-colors flex items-center gap-2 text-[var(--ink-800)] font-medium"
-              >
-                <Activity className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>CareVoice</span>
-              </Link>
-              <Link
-                href="/patient/documents"
-                className="p-2.5 rounded-md border border-[var(--ink-200)] hover:border-[var(--clinical)] hover:bg-[var(--clinical-light)]/30 transition-colors flex items-center gap-2 text-[var(--ink-800)] font-medium"
-              >
-                <FolderOpen className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Documents</span>
-              </Link>
-              <Link
-                href="/patient/reports"
-                className="p-2.5 rounded-md border border-[var(--ink-200)] hover:border-[var(--clinical)] hover:bg-[var(--clinical-light)]/30 transition-colors flex items-center gap-2 text-[var(--ink-800)] font-medium"
-              >
-                <ClipboardList className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Reports</span>
-              </Link>
-              <Link
-                href="/patient/profile"
-                className="p-2.5 rounded-md border border-[var(--ink-200)] hover:border-[var(--clinical)] hover:bg-[var(--clinical-light)]/30 transition-colors flex items-center gap-2 text-[var(--ink-800)] font-medium"
-              >
-                <User className="w-3.5 h-3.5 text-[var(--clinical)]" />
-                <span>Profile</span>
-              </Link>
+          {/* Quick Access Navigation Strip — compact list (not card grid) */}
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[var(--ink-200)]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)]">
+                Quick Access
+              </span>
+            </div>
+            <div className="divide-y divide-[var(--ink-200)]">
+              {[
+                { href: "/patient/intake",    icon: Activity,      label: "CareVoice Intake",       sub: "Start or resume consultation" },
+                { href: "/patient/documents", icon: FolderOpen,    label: "Documents",               sub: `${documents.length} uploaded` },
+                { href: "/patient/reports",   icon: ClipboardList, label: "Pre-Consultation Reports", sub: `${reports.length} report${reports.length !== 1 ? "s" : ""}` },
+                { href: "/patient/profile",   icon: User,          label: "Profile",                 sub: "Account & clinical history" },
+              ].map(({ href, icon: Icon, label, sub }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[var(--bg-surface-2)] transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon className="w-3.5 h-3.5 text-[var(--clinical)] flex-shrink-0" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-[var(--ink-900)]">{label}</p>
+                      <p className="text-[10px] text-[var(--ink-500)]">{sub}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-[var(--ink-400)] group-hover:text-[var(--clinical)] transition-colors flex-shrink-0" aria-hidden="true" />
+                </Link>
+              ))}
             </div>
           </section>
+
         </div>
       </div>
     </div>
