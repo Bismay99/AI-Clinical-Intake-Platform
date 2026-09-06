@@ -90,8 +90,21 @@ function StaffLoginFormContent() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email.trim() || !password || !hospitalCode.trim()) {
-      setFormError("Please enter your email, password, and hospital / department code.");
+    const code = hospitalCode.trim().toUpperCase();
+    const VALID_HOSPITAL_CODES = [
+      "HOSP-AIIMS-CARDIO",
+      "HOSP-AIIMS-DELHI",
+      "HOSP-4701",
+      "HOSP-APOLLO-GEN",
+      "AIIMS-DELHI",
+      "HOSP-9842",
+      "GENERAL-OPD",
+    ];
+    const isValidFormat = VALID_HOSPITAL_CODES.includes(code) || (code.startsWith("HOSP-") && code.length >= 6);
+    if (!isValidFormat) {
+      setFormError(
+        "Invalid Hospital Code. Please enter your authorized hospital code (e.g. HOSP-AIIMS-CARDIO)."
+      );
       return;
     }
 
@@ -312,13 +325,21 @@ function StaffLoginFormContent() {
                 type="text"
                 required
                 value={hospitalCode}
-                onChange={(e) => setHospitalCode(e.target.value)}
-                placeholder="e.g. HOSP-9842 or GENERAL-OPD"
+                onChange={(e) => setHospitalCode(e.target.value.toUpperCase())}
+                placeholder="e.g. HOSP-AIIMS-CARDIO"
                 className="w-full text-xs px-3 py-2.5 rounded-md border border-[#30363D] bg-[#161B22] text-white placeholder-[#484F58] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors font-mono"
               />
-              <p className="text-[11px] text-[#8B949E]">
-                Provided by your hospital administrator.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-[#8B949E]">
+                <span>Assigned hospital code provided by administrator.</span>
+                <button
+                  type="button"
+                  onClick={() => setHospitalCode("HOSP-AIIMS-CARDIO")}
+                  className="font-mono text-[#58A6FF] hover:underline cursor-pointer bg-[#161B22] border border-[#30363D] px-1.5 py-0.5 rounded text-[10px]"
+                  title="Click to fill AIIMS Cardiology hospital code"
+                >
+                  Fill HOSP-AIIMS-CARDIO
+                </button>
+              </div>
             </div>
 
             <Button

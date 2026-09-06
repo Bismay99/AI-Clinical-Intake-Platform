@@ -102,19 +102,22 @@ function LoginFormContent() {
       // 1. Submit login request
       const tokenResp = await login({ email: email.trim(), password });
 
-      // 2. Persist access token
-      storeToken(tokenResp.access_token);
-
-      // 3. Fetch authoritative user profile
+      // 2. Fetch authoritative user profile to check role
       const user = await getMe(tokenResp.access_token);
-      setAuth(tokenResp.access_token, user);
 
-      // 4. Authoritative routing based on account role (NO frontend role toggle)
+      // 3. Block doctors from logging in on the patient portal
       if (user.role === "doctor" || tokenResp.role === "doctor") {
-        router.push("/doctor/dashboard");
-      } else {
-        router.push("/patient/dashboard");
+        setFormError(
+          "Doctor accounts are restricted from the Patient Portal. Please sign in via the Doctor Workstation."
+        );
+        setIsLoading(false);
+        return;
       }
+
+      // 4. Persist access token and set patient auth
+      storeToken(tokenResp.access_token);
+      setAuth(tokenResp.access_token, user);
+      router.push("/patient/dashboard");
     } catch (err: unknown) {
       console.error("Login failed:", err);
       if (err instanceof ApiError) {
@@ -250,9 +253,22 @@ function LoginFormContent() {
 
           {/* Error Banner */}
           {error && (
-            <div className="p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-xs text-[var(--status-error-fg)] flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span className="leading-snug">{error}</span>
+            <div className="p-3 rounded-md border border-[var(--status-error-bd)] bg-[var(--status-error-bg)] text-xs text-[var(--status-error-fg)] space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span className="leading-snug">{error}</span>
+              </div>
+              {error.includes("Doctor Workstation") && (
+                <div className="pt-1 pl-6">
+                  <Link
+                    href="/staff-login"
+                    className="inline-flex items-center gap-1.5 font-bold text-[var(--clinical)] hover:underline bg-[var(--clinical-light)] px-3 py-1.5 rounded-md border border-[var(--clinical-mid)]"
+                  >
+                    <span>Open Doctor Workstation Sign In</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
