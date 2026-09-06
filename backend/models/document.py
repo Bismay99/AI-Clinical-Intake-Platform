@@ -27,6 +27,7 @@ class Document(Base):
     file_size = Column(Integer, nullable=True)
     mime_type = Column(String(100), nullable=True)
     processing_status = Column(String(50), default="processed", nullable=True)  # uploaded | processing | processed | failed
+    processing_error = Column(String(255), nullable=True)
     page_count = Column(Integer, nullable=True)
     language_hint = Column(String(10), default="en", nullable=False)
     upload_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)

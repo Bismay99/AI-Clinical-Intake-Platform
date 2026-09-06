@@ -16,6 +16,7 @@ import {
   HardDrive,
   FileCheck2,
   Plus,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -51,7 +52,7 @@ export default function PatientDocumentsPage() {
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // 1. Fetch patient documents with TanStack Query
+  // 1. Fetch patient documents with automatic polling when background processing is active
   const {
     data: documents = [],
     isLoading: isLoadingDocs,
@@ -59,6 +60,15 @@ export default function PatientDocumentsPage() {
   } = useQuery({
     queryKey: ["patient", "documents"],
     queryFn: getPatientDocuments,
+    refetchInterval: (query) => {
+      const docs = query.state.data;
+      const isProcessing = docs?.some(
+        (d: PatientDocumentItem) =>
+          d.processing_status === "processing" || d.processing_status === "uploaded"
+      );
+      // Fast 2.5s polling while OCR/Gemini background extraction runs
+      return isProcessing ? 2500 : false;
+    },
   });
 
   // 2. Fetch patient encounters for selection
@@ -98,14 +108,20 @@ export default function PatientDocumentsPage() {
     },
   });
 
-  // 3. Document upload mutation
+  // 3. Document upload mutation (decoupled fast upload)
   const uploadMutation = useMutation({
     mutationFn: uploadPatientDocument,
     onSuccess: (resp) => {
-      setUploadSuccess(`Document uploaded successfully. ${resp.entity_count} clinical entities extracted.`);
+      if (resp.processing_status === "processing") {
+        setUploadSuccess(
+          "Document securely stored. AI clinical OCR and entity extraction is processing in the background..."
+        );
+      } else {
+        setUploadSuccess(`Document uploaded successfully. ${resp.entity_count} clinical entities extracted.`);
+      }
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      // Invalidate queries across the platform
+      // Invalidate queries across the platform to reflect immediately
       qc.invalidateQueries({ queryKey: ["patient", "documents"] });
       qc.invalidateQueries({ queryKey: ["patient", "metrics"] });
       qc.invalidateQueries({ queryKey: ["patient", "reports"] });
@@ -218,7 +234,7 @@ export default function PatientDocumentsPage() {
                     type="button"
                     onClick={() => createEncounterMutation.mutate()}
                     disabled={createEncounterMutation.isPending}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#155EEF] hover:text-[#004EEB] hover:underline"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#155EEF] hover:text-[#004EEB] hover:underline cursor-pointer"
                   >
                     <Plus className="w-3 h-3" />
                     <span>{createEncounterMutation.isPending ? "Creating..." : "New Consultation"}</span>
@@ -231,7 +247,7 @@ export default function PatientDocumentsPage() {
                     <button
                       type="button"
                       onClick={() => createEncounterMutation.mutate()}
-                      className="font-bold underline ml-2"
+                      className="font-bold underline ml-2 cursor-pointer"
                     >
                       Start One
                     </button>
@@ -259,7 +275,7 @@ export default function PatientDocumentsPage() {
                     <button
                       type="button"
                       onClick={() => createEncounterMutation.mutate()}
-                      className="text-[#155EEF] font-bold underline ml-1 hover:text-[#004EEB]"
+                      className="text-[#155EEF] font-bold underline ml-1 hover:text-[#004EEB] cursor-pointer"
                     >
                       Start New Consultation
                     </button>
@@ -305,7 +321,7 @@ export default function PatientDocumentsPage() {
                   size="sm"
                   disabled={uploadMutation.isPending || !selectedFile || !activeEncounterId || isEncounterCompleted}
                   isLoading={uploadMutation.isPending}
-                  className="text-xs font-semibold px-5"
+                  className="text-xs font-semibold px-5 cursor-pointer"
                 >
                   <FileUp className="w-3.5 h-3.5 mr-1.5" />
                   <span>Upload & Extract</span>
@@ -316,7 +332,7 @@ export default function PatientDocumentsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Section 2: Uploaded Documents List with Expandable Provenance ── */}
+      {/* ── Section 2: Uploaded Documents List with Live Processing Badges & Provenance ── */}
       <Card className="border-[#E4E7EC] shadow-xs">
         <CardHeader className="pb-3 border-b border-[#E4E7EC]">
           <CardTitle className="text-sm font-bold text-[#172033] flex items-center justify-between">
@@ -347,6 +363,11 @@ export default function PatientDocumentsPage() {
               {documents.map((doc) => {
                 const isExpanded = !!expandedDocIds[doc.id];
                 const entityCount = doc.extracted_entities?.length ?? doc.entity_count ?? 0;
+                const isProcessing =
+                  doc.processing_status === "processing" || doc.processing_status === "uploaded";
+                const isFailed = doc.processing_status === "failed";
+                const isProcessed = doc.processing_status === "processed";
+
                 return (
                   <div
                     key={doc.id}
@@ -379,18 +400,26 @@ export default function PatientDocumentsPage() {
                       </div>
 
                       <div className="flex items-center gap-2.5 flex-shrink-0">
-                        {/* Status Badge */}
+                        {/* Dynamic Status Badge */}
                         <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                            doc.processing_status === "processed"
+                          className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                            isProcessed
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : doc.processing_status === "failed"
+                              : isFailed
                               ? "bg-red-50 text-red-700 border-red-200"
-                              : "bg-blue-50 text-blue-700 border-blue-200"
+                              : "bg-blue-50 text-blue-700 border-blue-200 animate-pulse"
                           }`}
                         >
-                          <FileCheck2 className="w-3 h-3" />
-                          <span className="capitalize">{doc.processing_status || "Processed"}</span>
+                          {isProcessing ? (
+                            <Spinner className="w-3 h-3 text-blue-600" />
+                          ) : isFailed ? (
+                            <AlertCircle className="w-3 h-3 text-red-600" />
+                          ) : (
+                            <FileCheck2 className="w-3 h-3 text-emerald-600" />
+                          )}
+                          <span className="capitalize">
+                            {isProcessing ? "AI Extracting..." : (doc.processing_status || "Processed")}
+                          </span>
                         </span>
 
                         {/* Entities Extracted Badge */}
@@ -402,13 +431,21 @@ export default function PatientDocumentsPage() {
                         {/* Expand Button */}
                         <button
                           onClick={() => toggleExpand(doc.id)}
-                          className="p-1.5 rounded-lg border border-[#E4E7EC] hover:bg-gray-50 text-[#667085] transition-colors ml-1"
+                          className="p-1.5 rounded-lg border border-[#E4E7EC] hover:bg-gray-50 text-[#667085] transition-colors ml-1 cursor-pointer"
                           title={isExpanded ? "Collapse extracted fields" : "View extracted fields"}
                         >
                           {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
+
+                    {/* Extraction Error Notice if failed */}
+                    {isFailed && doc.processing_error && (
+                      <div className="mx-4 mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{doc.processing_error}</span>
+                      </div>
+                    )}
 
                     {/* Expandable Entity Details */}
                     {isExpanded && (
@@ -433,40 +470,34 @@ export default function PatientDocumentsPage() {
                                 <div>
                                   <div className="flex items-center gap-2">
                                     <span className="font-bold text-[#172033]">{ent.label}</span>
-                                    <span className="text-[#667085] font-mono text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">
-                                      {ent.source_location || "page 1"}
+                                    <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">
+                                      {ent.field_name}
                                     </span>
                                   </div>
-                                  <p className="text-sm font-medium text-[#172033] mt-0.5">{ent.value}</p>
+                                  <p className="text-sm font-semibold text-[#155EEF] mt-1">{ent.value}</p>
                                 </div>
 
-                                <div className="flex items-center gap-3 flex-shrink-0">
-                                  <span className="text-[11px] font-mono text-[#12B76A] font-semibold">
-                                    {Math.round(ent.confidence * 100)}% conf
-                                  </span>
-
-                                  <span
-                                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                      ent.verification_status === "accepted"
-                                        ? "bg-green-100 text-green-800"
-                                        : ent.verification_status === "edited"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : ent.verification_status === "rejected"
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-amber-100 text-amber-800"
-                                    }`}
-                                  >
-                                    {ent.verification_status === "unreviewed"
-                                      ? "AI extracted — awaiting doctor verification"
-                                      : `Doctor ${ent.verification_status}`}
-                                  </span>
+                                <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                                  {ent.confidence != null && (
+                                    <span className="text-[11px] text-[#667085]">
+                                      Conf: {(ent.confidence * 100).toFixed(0)}%
+                                    </span>
+                                  )}
+                                  {ent.evidence && ent.evidence.length > 0 && (
+                                    <div className="flex items-center gap-1 text-[11px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                                      <HardDrive className="w-3 h-3" />
+                                      <span>Evidence match</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-xs text-[#667085] italic py-2">
-                            No discrete clinical entities recorded for this document yet.
+                          <p className="text-xs text-[#667085] py-2">
+                            {isProcessing
+                              ? "AI clinical OCR and entity extraction is currently analyzing this file. Extracted entities will populate shortly."
+                              : "No clinical entities extracted for this document."}
                           </p>
                         )}
                       </div>

@@ -1,14 +1,26 @@
 "use client";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Stethoscope, User, Eye, EyeOff, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import {
+  Stethoscope,
+  Activity,
+  ShieldCheck,
+  Lock,
+  Mic,
+  FileText,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Building2,
+  CheckCircle2,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { useAuthStore } from "@/stores/auth.store";
 import { login, getMe } from "@/services/auth.service";
-import { ApiError, storeToken, clearToken } from "@/lib/api";
-
-type SelectedRole = "patient" | "doctor" | null;
+import { ApiError, storeToken } from "@/lib/api";
 
 function GoogleIcon() {
   return (
@@ -37,22 +49,22 @@ function parseUrlError(error: string | null, detail: string | null): string | nu
   if (!error) return null;
   switch (error) {
     case "doctor_account_required":
-      return "Google accounts cannot automatically register as doctors. Doctor access requires an existing authorized hospital account.";
+      return "Doctor portal access requires a verified hospital doctor account. Google accounts without pre-authorized doctor credentials cannot sign into the doctor workstation.";
     case "unauthorized_doctor":
-      return "This Google account is not authorized as a hospital doctor. Please sign in with your hospital doctor credentials.";
+      return "This Google account is not mapped to an active hospital physician. Please sign in with your hospital-issued credentials.";
     case "unverified_email":
-      return "Your Google email address is not verified by Google. Please verify your email and try again.";
+      return "Your Google email address is unverified. Please verify your Google email before signing in.";
     case "invalid_state":
-      return "Security verification failed (invalid OAuth state). Please try again.";
+      return "Security verification failed (invalid OAuth state parameter). Please try again.";
     case "account_disabled":
-      return "Your account has been deactivated. Please contact your hospital administrator.";
+      return "This clinical account is deactivated. Please contact your hospital system administrator.";
     case "database_error":
-      return "A database error occurred during sign-in. Please try again later.";
+      return "A database error occurred during sign-in. Please try again shortly.";
     case "google_auth_failed":
       if (detail === "access_denied") return "Sign in with Google was cancelled.";
       return detail ? `Google authentication failed: ${detail}` : "Google authentication failed. Please try again.";
     default:
-      return detail || "Authentication failed. Please try again.";
+      return detail || "Authentication failed. Please verify your credentials.";
   }
 }
 
@@ -61,14 +73,12 @@ function LoginFormContent() {
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
 
-  const [selectedRole, setSelectedRole] = useState<SelectedRole>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Derived URL error without effect
   const urlError = parseUrlError(searchParams.get("error"), searchParams.get("detail"));
   const error = formError || urlError;
 
@@ -76,59 +86,51 @@ function LoginFormContent() {
     setFormError(null);
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const cleanUrl = baseUrl.replace(/\/$/, "");
-    const roleParam = selectedRole ? `?role=${selectedRole}` : "";
-    window.location.assign(`${cleanUrl}/auth/google${roleParam}`);
+    // Role is determined authoritatively by the backend upon exchange
+    window.location.assign(`${cleanUrl}/auth/google`);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedRole) {
-      setFormError("Please select whether you are a Patient or Doctor.");
+    if (!email.trim() || !password) {
+      setFormError("Please enter both your email address and password.");
       return;
     }
+
     setIsLoading(true);
     setFormError(null);
-    try {
-      // 1. Submit login request via centralized API client
-      const tokenResp = await login({ email, password });
 
-      // 2. Persist token immediately so getMe and future requests are authenticated
+    try {
+      // 1. Submit login request
+      const tokenResp = await login({ email: email.trim(), password });
+
+      // 2. Persist access token
       storeToken(tokenResp.access_token);
 
-      // 3. Backend role is authoritative — selected role is only a UI hint
-      if (tokenResp.role !== selectedRole && tokenResp.role !== "admin") {
-        clearToken();
-        setFormError(
-          `Your account role is "${tokenResp.role}", but you selected "${selectedRole}". Please select the correct role.`
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      // 4. Fetch full user profile with the authenticated token
+      // 3. Fetch authoritative user profile
       const user = await getMe(tokenResp.access_token);
       setAuth(tokenResp.access_token, user);
 
-      // 5. Route to appropriate dashboard based on BACKEND role
-      if (tokenResp.role === "patient") {
-        router.push("/patient/dashboard");
-      } else {
+      // 4. Authoritative routing based on account role (NO frontend role toggle)
+      if (user.role === "doctor" || tokenResp.role === "doctor") {
         router.push("/doctor/dashboard");
+      } else {
+        router.push("/patient/dashboard");
       }
-    } catch (err) {
-      clearToken();
+    } catch (err: unknown) {
+      console.error("Login failed:", err);
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          setFormError("Invalid email or password.");
-        } else if (err.status >= 500) {
-          setFormError("Server error. Please try again later.");
+          setFormError("Invalid email or password. Please verify your credentials and try again.");
+        } else if (err.status === 403) {
+          setFormError("Your account has been deactivated or restricted. Please contact your hospital administrator.");
         } else {
-          setFormError(err.detail);
+          setFormError(err.detail || "Authentication failed. Please try again.");
         }
-      } else if (err instanceof TypeError && (err as TypeError).message.includes("fetch")) {
-        setFormError("Unable to connect to the server. Please check your network connection.");
+      } else if (err instanceof Error) {
+        setFormError(err.message);
       } else {
-        setFormError("An unexpected error occurred. Please try again.");
+        setFormError("Unable to connect to the clinical server. Please check your network connection.");
       }
     } finally {
       setIsLoading(false);
@@ -136,100 +138,193 @@ function LoginFormContent() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#F7F9FC] px-4 py-8">
-      <div className="w-full max-w-sm">
-        {/* Branding */}
-        <div className="text-center mb-8">
-          <span className="text-[#155EEF] font-bold text-2xl tracking-tight">PS47</span>
-          <p className="text-[#667085] text-sm mt-1">AI-assisted clinical intake before the doctor consultation</p>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F7F9FC]">
+      {/* ── LEFT PANEL: Clinical Platform Identity & Trust ── */}
+      <div className="lg:w-7/12 xl:w-3/5 bg-[#0A1128] text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden border-r border-slate-800 shadow-2xl">
+        {/* Subtle decorative medical gradient and pulse waveform */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Ambient SVG waveform in background */}
+        <div className="absolute inset-x-0 bottom-12 opacity-10 pointer-events-none flex justify-center">
+          <svg className="w-full max-w-2xl h-28 text-teal-400" viewBox="0 0 800 120" fill="none" stroke="currentColor">
+            <path
+              d="M0 60 H200 L220 20 L240 100 L260 40 L280 80 L300 60 H500 L520 15 L540 105 L560 35 L580 85 L600 60 H800"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E4E7EC] shadow-sm p-8">
-          <h1 className="text-lg font-semibold text-[#172033] mb-6">Sign in</h1>
-
-          {/* Role selection */}
-          <p className="text-sm text-[#667085] mb-3 font-medium">I am a</p>
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            {([
-              { value: "patient" as const, label: "Patient", icon: User },
-              { value: "doctor" as const, label: "Doctor", icon: Stethoscope },
-            ]).map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => { setSelectedRole(value); setFormError(null); }}
-                className={[
-                  "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors",
-                  selectedRole === value
-                    ? "border-[#155EEF] bg-blue-50 text-[#155EEF]"
-                    : "border-[#E4E7EC] hover:border-gray-300 text-[#667085]",
-                ].join(" ")}
-              >
-                <Icon className="w-6 h-6" />
-                <span className="text-sm font-medium">{label}</span>
-              </button>
-            ))}
+        {/* Header / Brand */}
+        <div className="relative z-10 space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#155EEF] to-[#0F9D8A] flex items-center justify-center shadow-lg shadow-blue-500/20 text-white">
+              <Stethoscope className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold tracking-tight text-white font-mono">PS47</span>
+                <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-blue-500/20 border border-blue-400/30 text-blue-300">
+                  Clinical Workstation
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 font-medium">AI Clinical Intake Platform</p>
+            </div>
           </div>
 
-          {/* Error notice */}
+          <div className="pt-6 space-y-4 max-w-xl">
+            <h1 className="text-3xl sm:text-4xl xl:text-5xl font-extrabold tracking-tight text-white leading-tight">
+              Transforming Clinical Intake with{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-cyan-200">
+                Ambient Intelligence
+              </span>
+            </h1>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+              Hospital-grade conversational triage, automated multi-document clinical extraction, and doctor-in-the-loop evidence provenance.
+            </p>
+          </div>
+        </div>
+
+        {/* Three Trust Pillars */}
+        <div className="relative z-10 py-10 space-y-4 max-w-xl">
+          <div className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm">
+            <div className="w-9 h-9 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Mic className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">Ambient Voice Intake (CareVoice)</h3>
+              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                Multilingual adaptive conversational intake via LiveKit WebRTC, triaging symptoms and building real-time clinical timelines.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm">
+            <div className="w-9 h-9 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">Multimodal Clinical Extraction</h3>
+              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                Rapid PaddleOCR and Gemini clinical parsing extracting diagnoses, medications, and laboratory values with strict grounding.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4 p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm">
+            <div className="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">Doctor-Governed Provenance</h3>
+              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                Immutable evidence citations linking every extracted entity back to exact document coordinates or patient consultation transcripts.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Security / Compliance Badges */}
+        <div className="relative z-10 pt-6 border-t border-slate-800/80 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-teal-400" />
+            <span>Hospital-Grade Infrastructure</span>
+          </div>
+          <span>•</span>
+          <div className="flex items-center gap-1.5">
+            <Lock className="w-3.5 h-3.5 text-blue-400" />
+            <span>Role-Governed Access</span>
+          </div>
+          <span>•</span>
+          <div className="flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Audit-Proof Provenance</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── RIGHT PANEL: Authentication Card ── */}
+      <div className="lg:w-5/12 xl:w-2/5 flex items-center justify-center p-6 sm:p-10 lg:p-12">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-[#E4E7EC] shadow-xl p-8 sm:p-10 space-y-6">
+          {/* Card Header */}
+          <div className="text-center space-y-1.5">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-[#155EEF] mb-1">
+              <Lock className="w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-bold text-[#172033]">Sign In to Portal</h2>
+            <p className="text-xs text-[#667085]">
+              Access your clinical records or hospital workstation
+            </p>
+          </div>
+
+          {/* Error Banner */}
           {error && (
-            <div className="mb-5 flex items-start gap-2 text-sm text-[#D92D20] bg-red-50 border border-red-200 rounded-lg p-3">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <p className="leading-snug">{error}</p>
+            <div className="p-3.5 rounded-xl border border-red-200 bg-red-50 text-xs text-[#D92D20] flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span className="leading-snug">{error}</span>
             </div>
           )}
 
-          {/* Real Google OAuth 2.0 / OpenID Connect Button */}
+          {/* Google Sign-In Button */}
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            aria-label="Continue with Google"
-            className="w-full h-11 px-4 rounded-xl border border-[#E4E7EC] bg-white hover:bg-gray-50 active:bg-gray-100 text-[#172033] font-medium text-sm flex items-center justify-center gap-3 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-[#155EEF] focus:ring-offset-2"
+            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-[#E4E7EC] bg-white text-xs font-semibold text-[#172033] hover:bg-gray-50 transition-all shadow-2xs cursor-pointer"
           >
             <GoogleIcon />
             <span>Continue with Google</span>
           </button>
 
           {/* Divider */}
-          <div className="relative flex py-4 items-center">
+          <div className="relative flex items-center py-1">
             <div className="flex-grow border-t border-[#E4E7EC]"></div>
-            <span className="flex-shrink mx-3 text-xs text-[#667085] uppercase tracking-wider font-medium">
-              or with password
+            <span className="flex-shrink mx-3 text-[11px] text-[#667085] uppercase tracking-wider font-semibold">
+              or sign in with password
             </span>
             <div className="flex-grow border-t border-[#E4E7EC]"></div>
           </div>
 
-          {/* Existing Email/Password Login Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <Input
-              id="email"
-              label="Email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-xs font-semibold text-[#172033] mb-1.5">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="doctor@hospital.org or patient@email.com"
+                className="w-full text-xs p-3 rounded-xl border border-[#E4E7EC] bg-white text-[#172033] placeholder:text-gray-400 focus:outline-none focus:border-[#155EEF] focus:ring-1 focus:ring-[#155EEF] transition-all"
+              />
+            </div>
 
-            {/* Password with show/hide toggle */}
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className="text-sm font-medium text-[#172033]">Password</label>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password" className="block text-xs font-semibold text-[#172033]">
+                  Password
+                </label>
+              </div>
               <div className="relative">
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
-                  placeholder="••••••"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-10 w-full rounded-lg border border-[#E4E7EC] bg-white px-3 pr-10 text-sm text-[#172033] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#155EEF] focus:border-transparent"
+                  placeholder="••••••••"
+                  className="w-full text-xs p-3 pr-10 rounded-xl border border-[#E4E7EC] bg-white text-[#172033] placeholder:text-gray-400 focus:outline-none focus:border-[#155EEF] focus:ring-1 focus:ring-[#155EEF] transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#667085] hover:text-[#172033]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                   tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -238,17 +333,37 @@ function LoginFormContent() {
               </div>
             </div>
 
-            <Button type="submit" isLoading={isLoading} className="mt-2 w-full">
-              Sign in
+            <Button
+              type="submit"
+              size="lg"
+              isLoading={isLoading}
+              className="w-full text-xs font-semibold py-3 rounded-xl shadow-xs mt-2 cursor-pointer"
+            >
+              <span>Sign In to Portal</span>
+              {!isLoading && <ArrowRight className="w-3.5 h-3.5 ml-1.5" />}
             </Button>
           </form>
-        </div>
 
-        <p className="text-center text-xs text-[#667085] mt-6">
-          PS47 is for authorised hospital use only.
-        </p>
+          {/* Registration CTA for patients */}
+          <div className="pt-2 text-center border-t border-[#E4E7EC]/60">
+            <p className="text-xs text-[#667085]">
+              New patient?{" "}
+              <Link
+                href="/register"
+                className="font-semibold text-[#155EEF] hover:text-[#004EEB] hover:underline"
+              >
+                Register an account
+              </Link>
+            </p>
+          </div>
+
+          {/* Footer Security Notice */}
+          <p className="text-[11px] text-center text-[#667085]/80 leading-normal">
+            Authorized hospital personnel and registered patients only. All system actions are monitored and audited for data protection.
+          </p>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -256,8 +371,11 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#F7F9FC]">
-          <span className="text-[#155EEF] font-bold text-2xl">PS47</span>
+        <div className="min-h-screen flex items-center justify-center bg-[#0A1128] text-white">
+          <div className="flex items-center gap-3">
+            <Stethoscope className="w-7 h-7 text-teal-400 animate-pulse" />
+            <span className="text-lg font-bold font-mono tracking-wider">PS47</span>
+          </div>
         </div>
       }
     >
