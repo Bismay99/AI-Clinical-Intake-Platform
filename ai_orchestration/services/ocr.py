@@ -20,7 +20,7 @@ Downstream extraction and normalization happen in extraction.py.
 import io
 import os
 from dataclasses import dataclass, field
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Tuple
 
 from google.cloud import vision
 from google.api_core.exceptions import GoogleAPICallError, PermissionDenied, Unauthenticated
@@ -255,102 +255,109 @@ def _extract_with_paddleocr(
     Processes image bytes, executes text detection and recognition,
     and returns OcrBlock items preserving full text, bounding boxes, and confidence.
     """
-    # 1. Decode image bytes to numpy array
+    # 1. Decode bytes to numpy images (handling both PDF and standard images)
     try:
         from PIL import Image
         import numpy as np
 
-        pil_image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
-        img_np = np.array(pil_image)
-    except Exception as exc:
-        raise OcrInvalidInputError(f"Failed to decode document bytes as a valid image: {exc}") from exc
+        images_np: List[Tuple[int, np.ndarray]] = []
+        if file_bytes.startswith(b"%PDF") or b"%PDF" in file_bytes[:1024]:
+            import pypdfium2 as pdfium
 
-    # 2. Run inference
-    ocr_engine = client or get_paddle_ocr_client(lang=language_hint or "en")
-    try:
-        # PaddleOCR 3.7.0 supports .ocr(img_np)
-        raw_results = ocr_engine.ocr(img_np)
+            pdf = pdfium.PdfDocument(file_bytes)
+            for page_idx, page in enumerate(pdf, start=1):
+                # Render page at 2x resolution (144 dpi) for high-accuracy OCR
+                pil_page = page.render(scale=2).to_pil().convert("RGB")
+                images_np.append((page_idx, np.array(pil_page)))
+            pdf.close()
+        else:
+            pil_image = Image.open(io.BytesIO(file_bytes)).convert("RGB")
+            images_np.append((1, np.array(pil_image)))
     except Exception as exc:
-        raise OcrApiError(f"PaddleOCR inference failed: {exc}") from exc
+        raise OcrInvalidInputError(f"Failed to decode document bytes as a valid image or PDF: {exc}") from exc
 
-    # 3. Parse output
-    # In PaddleOCR 3.7.0, raw_results is a list of OCRResult dict-like objects:
-    # [{'rec_texts': [...], 'rec_scores': [...], 'rec_polys': [...], ...}]
-    if not raw_results or len(raw_results) == 0:
+    if not images_np:
         return []
 
+    # 2. Run inference across all pages
+    ocr_engine = client or get_paddle_ocr_client(lang=language_hint or "en")
     ocr_blocks: List[OcrBlock] = []
 
     try:
-        for page_idx, page_res in enumerate(raw_results, start=1):
-            if page_res is None:
+        for page_idx, img_np in images_np:
+            raw_results = ocr_engine.ocr(img_np)
+            if not raw_results:
                 continue
 
-            # Support both PaddleOCR 3.x OCRResult / dict and older 2.x list format
-            if isinstance(page_res, dict) or hasattr(page_res, "get"):
-                rec_texts = page_res.get("rec_texts", [])
-                rec_scores = page_res.get("rec_scores", [])
-                rec_polys = page_res.get("rec_polys", [])
+            for res_idx, page_res in enumerate(raw_results, start=1):
+                if page_res is None:
+                    continue
 
-                for block_idx, (text, score) in enumerate(zip(rec_texts, rec_scores), start=1):
-                    text_clean = str(text).strip()
-                    if not text_clean:
-                        continue
+                # Support both PaddleOCR 3.x OCRResult / dict and older 2.x list format
+                if isinstance(page_res, dict) or hasattr(page_res, "get"):
+                    rec_texts = page_res.get("rec_texts", [])
+                    rec_scores = page_res.get("rec_scores", [])
+                    rec_polys = page_res.get("rec_polys", [])
 
-                    poly = rec_polys[block_idx - 1] if block_idx - 1 < len(rec_polys) else None
-                    region_str = _format_paddle_poly(poly) if poly is not None else f"page:{page_idx}/block:{block_idx}"
+                    for block_idx, (text, score) in enumerate(zip(rec_texts, rec_scores), start=1):
+                        text_clean = str(text).strip()
+                        if not text_clean:
+                            continue
 
-                    confidence = max(0.0, min(1.0, float(score)))
+                        poly = rec_polys[block_idx - 1] if block_idx - 1 < len(rec_polys) else None
+                        region_str = _format_paddle_poly(poly) if poly is not None else f"page:{page_idx}/block:{block_idx}"
+                        confidence = max(0.0, min(1.0, float(score)))
 
-                    ocr_blocks.append(
-                        OcrBlock(
-                            text=text_clean,
-                            page=page_idx,
-                            region=region_str,
-                            raw_confidence=confidence,
-                            metadata={
-                                "provider": "paddleocr",
-                                "document_type": document_type,
-                                "block_index": block_idx,
-                            },
+                        ocr_blocks.append(
+                            OcrBlock(
+                                text=text_clean,
+                                page=page_idx,
+                                region=region_str,
+                                raw_confidence=confidence,
+                                metadata={
+                                    "provider": "paddleocr",
+                                    "document_type": document_type,
+                                    "block_index": block_idx,
+                                },
+                            )
                         )
-                    )
 
-            elif isinstance(page_res, list):
-                # Older PaddleOCR format: list of [[ [x,y], ... ], (text, score)]
-                for block_idx, line in enumerate(page_res, start=1):
-                    if not line or len(line) < 2:
-                        continue
-                    poly, (text, score) = line[0], line[1]
-                    text_clean = str(text).strip()
-                    if not text_clean:
-                        continue
+                elif isinstance(page_res, list):
+                    # Older PaddleOCR format: list of [[ [x,y], ... ], (text, score)]
+                    for block_idx, line in enumerate(page_res, start=1):
+                        if not line or len(line) < 2:
+                            continue
+                        poly, (text, score) = line[0], line[1]
+                        text_clean = str(text).strip()
+                        if not text_clean:
+                            continue
 
-                    region_str = _format_paddle_poly(poly)
-                    confidence = max(0.0, min(1.0, float(score)))
+                        region_str = _format_paddle_poly(poly)
+                        confidence = max(0.0, min(1.0, float(score)))
 
-                    ocr_blocks.append(
-                        OcrBlock(
-                            text=text_clean,
-                            page=page_idx,
-                            region=region_str,
-                            raw_confidence=confidence,
-                            metadata={
-                                "provider": "paddleocr",
-                                "document_type": document_type,
-                                "block_index": block_idx,
-                            },
+                        ocr_blocks.append(
+                            OcrBlock(
+                                text=text_clean,
+                                page=page_idx,
+                                region=region_str,
+                                raw_confidence=confidence,
+                                metadata={
+                                    "provider": "paddleocr",
+                                    "document_type": document_type,
+                                    "block_index": block_idx,
+                                },
+                            )
                         )
-                    )
-            else:
-                raise OcrResponseError(f"Unexpected PaddleOCR page result type: {type(page_res).__name__}")
+                else:
+                    raise OcrResponseError(f"Unexpected PaddleOCR page result type: {type(page_res).__name__}")
 
         return ocr_blocks
 
     except OcrResponseError:
         raise
     except Exception as exc:
-        raise OcrResponseError(f"Failed to parse PaddleOCR response: {exc}") from exc
+        raise OcrApiError(f"PaddleOCR inference failed: {exc}") from exc
+
 
 
 # ---------------------------------------------------------------------------

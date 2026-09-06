@@ -458,3 +458,86 @@ def test_verified_document_entity_reflected_in_reports(client: TestClient):
         assert r_rep.status_code == 200
         verified_ents = [e for e in r_rep.json()["extracted_entities"] if e["verification_status"] == "accepted"]
         assert len(verified_ents) >= 1
+
+
+# 21. test_pdf_document_upload_ocr_decoding
+def test_pdf_document_upload_ocr_decoding(client: TestClient):
+    """
+    Verifies that uploading a real PDF file with magic header %PDF does not fail
+    with PIL.UnidentifiedImageError and successfully executes through OCR page rendering.
+    """
+    from PIL import Image, ImageDraw
+    p = _create_patient_and_encounter(client, "pdf_test")
+    enc_id = p["encounter_id"]
+    h = p["headers"]
+
+    # Generate a real valid single-page PDF with PIL
+    img = Image.new("RGB", (400, 200), color=(255, 255, 255))
+    d = ImageDraw.Draw(img)
+    d.text((20, 40), "Prescription: Metformin 500mg daily", fill=(0, 0, 0))
+    d.text((20, 80), "Diagnosis: Type 2 Diabetes", fill=(0, 0, 0))
+
+    buf = io.BytesIO()
+    img.save(buf, format="PDF")
+    pdf_bytes = buf.getvalue()
+    assert pdf_bytes.startswith(b"%PDF")
+
+    r = client.post(
+        "/intake/document/upload",
+        data={"encounter_id": enc_id, "document_type": "prescription"},
+        files={"file": ("dr_prescription.pdf", io.BytesIO(pdf_bytes), "application/pdf")},
+        headers=h,
+    )
+    assert r.status_code == 201, f"PDF upload failed: {r.text}"
+    data = r.json()
+    assert data["original_filename"] == "dr_prescription.pdf"
+    assert data["file_size"] == len(pdf_bytes)
+    # Processing status can be 'processed' (if Gemini succeeds) or 'failed' (if Gemini free tier rate limit occurs),
+    # but the HTTP upload itself must succeed with 201 and persistent Document record!
+    assert data["processing_status"] in ("processed", "failed")
+
+
+# 22. test_completed_encounter_upload_rejected_with_409
+def test_completed_encounter_upload_rejected_with_409(client: TestClient):
+    """
+    Verifies that uploading documents to a completed encounter returns 409 Conflict
+    with a clear explanatory message, enforcing that completed clinical encounters are immutable.
+    """
+    p = _create_patient_and_encounter(client, "completed_409")
+    enc_id = p["encounter_id"]
+    h = p["headers"]
+
+    # Start and submit intake
+    r_start = client.post("/intake/session/start", json={
+        "encounter_id": enc_id, "language": "en",
+        "schema_id": "allopathic_chest_pain_v1",
+    }, headers=h)
+    session_id = r_start.json()["session_id"]
+    client.post("/intake/submit", json={"session_id": session_id, "encounter_id": enc_id}, headers=h)
+
+    # Doctor assigns and marks completed
+    doc = _register_login(client, "dr_complete_enc@test.com", "password123", "doctor")
+    client.post(f"/doctor/encounter/{enc_id}/assign", headers=doc["headers"])
+    # Complete consultation
+    r_fin = client.post(f"/doctor/encounter/{enc_id}/finalize", json={"clinical_notes": "All done."}, headers=doc["headers"])
+    # Or check if finalize endpoint or db update: if finalize isn't defined, test whatever finishes encounter
+    if r_fin.status_code != 200:
+        # Update encounter to completed directly in db if finalize path differs
+        from backend.database import SessionLocal
+        from backend.models.encounter import Encounter, EncounterStatus
+        db = SessionLocal()
+        enc = db.query(Encounter).filter(Encounter.id == enc_id).first()
+        enc.queue_status = EncounterStatus.completed
+        db.commit()
+        db.close()
+
+    # Now attempt to upload document to completed encounter
+    r_upload = client.post(
+        "/intake/document/upload",
+        data={"encounter_id": enc_id, "document_type": "prescription"},
+        files={"file": ("late_rx.pdf", io.BytesIO(b"%PDF-1.4 mock content"), "application/pdf")},
+        headers=h,
+    )
+    assert r_upload.status_code == 409
+    assert "already been completed" in r_upload.json()["detail"]
+

@@ -15,13 +15,15 @@ import {
   ShieldCheck,
   HardDrive,
   FileCheck2,
+  Plus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { Badge } from "@/components/ui/Badge";
+import { ApiError } from "@/lib/api";
 import { getPatientDocuments, uploadPatientDocument } from "@/services/report.service";
-import { getMyEncounters } from "@/services/patient.service";
+import { getMyEncounters, createEncounter } from "@/services/patient.service";
 import type { PatientDocumentItem, PatientEntityEvidence } from "@/types/report";
 import type { EncounterResponse } from "@/types/patient";
 
@@ -60,13 +62,41 @@ export default function PatientDocumentsPage() {
   });
 
   // 2. Fetch patient encounters for selection
-  const { data: encounters = [] } = useQuery({
+  const { data: rawEncounters = [] } = useQuery({
     queryKey: ["patient", "encounters"],
     queryFn: getMyEncounters,
   });
 
-  // Set default encounter when loaded
-  const activeEncounterId = selectedEncounterId || (encounters.length > 0 ? encounters[0].id : "");
+  // Sort encounters so active/open ones appear first
+  const encounters = [...rawEncounters].sort((a, b) => {
+    const aCompleted = a.queue_status === "completed" ? 1 : 0;
+    const bCompleted = b.queue_status === "completed" ? 1 : 0;
+    return aCompleted - bCompleted;
+  });
+
+  // Set default encounter to the first active encounter (or first encounter)
+  const currentEncounter = encounters.find((e) => e.id === selectedEncounterId) || encounters[0];
+  const activeEncounterId = currentEncounter?.id || "";
+  const isEncounterCompleted = currentEncounter?.queue_status === "completed";
+
+  // Create new consultation mutation
+  const createEncounterMutation = useMutation({
+    mutationFn: () => createEncounter({ opd_department: "General OPD" }),
+    onSuccess: (newEnc) => {
+      qc.invalidateQueries({ queryKey: ["patient", "encounters"] });
+      setSelectedEncounterId(newEnc.id);
+      setUploadSuccess(`New consultation (${newEnc.id.slice(0, 8)}) created. You can now upload documents.`);
+      setUploadError(null);
+    },
+    onError: (err: unknown) => {
+      console.error("Failed to create encounter:", err);
+      if (err instanceof ApiError) {
+        setUploadError(err.detail || "Failed to start a new consultation.");
+      } else {
+        setUploadError("Could not start consultation. Please try again.");
+      }
+    },
+  });
 
   // 3. Document upload mutation
   const uploadMutation = useMutation({
@@ -82,7 +112,34 @@ export default function PatientDocumentsPage() {
     },
     onError: (err: unknown) => {
       console.error("Document upload error:", err);
-      setUploadError("Failed to upload document. Please ensure it is a valid PDF or image.");
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          setUploadError(
+            err.detail ||
+              "This encounter has already been completed and cannot be modified. Please select or start an active consultation."
+          );
+        } else if (err.status === 401) {
+          setUploadError("Session expired. Please log in again.");
+        } else if (err.status === 403) {
+          setUploadError("You do not have permission to upload documents to this encounter.");
+        } else if (err.status === 404) {
+          setUploadError("Encounter not found.");
+        } else if (err.status === 413) {
+          setUploadError("The file is too large. Maximum size is 10MB.");
+        } else if (err.status === 415) {
+          setUploadError("Unsupported file type. Please upload a PDF, PNG, or JPG.");
+        } else if (err.status === 422) {
+          setUploadError(err.detail || "Validation error with the uploaded document.");
+        } else if (err.status >= 500) {
+          setUploadError("Server error while processing document. Please try again.");
+        } else {
+          setUploadError(err.detail || "Failed to upload document.");
+        }
+      } else if (err instanceof Error) {
+        setUploadError(err.message || "Failed to upload document.");
+      } else {
+        setUploadError("Failed to upload document. Please check your connection.");
+      }
     },
   });
 
@@ -94,6 +151,12 @@ export default function PatientDocumentsPage() {
     e.preventDefault();
     if (!selectedFile || !activeEncounterId) {
       setUploadError("Please select an encounter and choose a file to upload.");
+      return;
+    }
+    if (isEncounterCompleted) {
+      setUploadError(
+        "This consultation has been completed and is read-only. Please start or select an active consultation to upload documents."
+      );
       return;
     }
 
@@ -147,23 +210,60 @@ export default function PatientDocumentsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Encounter selector */}
               <div>
-                <label className="text-xs font-semibold text-[#667085] block mb-1.5">
-                  Associated Consultation / Encounter
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-[#667085]">
+                    Associated Consultation / Encounter
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => createEncounterMutation.mutate()}
+                    disabled={createEncounterMutation.isPending}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#155EEF] hover:text-[#004EEB] hover:underline"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>{createEncounterMutation.isPending ? "Creating..." : "New Consultation"}</span>
+                  </button>
+                </div>
+
                 {encounters.length === 0 ? (
-                  <p className="text-xs text-[#667085] italic">No active consultations found.</p>
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 flex items-center justify-between">
+                    <span>No consultation active.</span>
+                    <button
+                      type="button"
+                      onClick={() => createEncounterMutation.mutate()}
+                      className="font-bold underline ml-2"
+                    >
+                      Start One
+                    </button>
+                  </div>
                 ) : (
                   <select
                     value={activeEncounterId}
                     onChange={(e) => setSelectedEncounterId(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-[#E4E7EC] bg-white text-[#172033] focus:outline-none focus:border-[#155EEF]"
                   >
-                    {encounters.map((enc) => (
-                      <option key={enc.id} value={enc.id}>
-                        {enc.opd_department || "General OPD"} — {enc.id.slice(0, 8)}... ({enc.queue_status})
-                      </option>
-                    ))}
+                    {encounters.map((enc) => {
+                      const isDone = enc.queue_status === "completed";
+                      return (
+                        <option key={enc.id} value={enc.id}>
+                          {enc.opd_department || "General OPD"} — {enc.id.slice(0, 8)}... {isDone ? "(Completed — Read-only)" : `(${enc.queue_status})`}
+                        </option>
+                      );
+                    })}
                   </select>
+                )}
+
+                {isEncounterCompleted && (
+                  <div className="mt-2 p-2.5 rounded-lg border border-amber-200 bg-amber-50 text-[11px] text-amber-800 flex items-center justify-between">
+                    <span>This consultation is completed and finalized.</span>
+                    <button
+                      type="button"
+                      onClick={() => createEncounterMutation.mutate()}
+                      className="text-[#155EEF] font-bold underline ml-1 hover:text-[#004EEB]"
+                    >
+                      Start New Consultation
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -196,13 +296,14 @@ export default function PatientDocumentsPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="application/pdf,image/png,image/jpeg"
+                  disabled={isEncounterCompleted}
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="text-xs text-[#667085] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#155EEF] hover:file:bg-blue-100 cursor-pointer"
+                  className="text-xs text-[#667085] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-[#155EEF] hover:file:bg-blue-100 cursor-pointer disabled:opacity-50"
                 />
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={uploadMutation.isPending || !selectedFile || !activeEncounterId}
+                  disabled={uploadMutation.isPending || !selectedFile || !activeEncounterId || isEncounterCompleted}
                   isLoading={uploadMutation.isPending}
                   className="text-xs font-semibold px-5"
                 >
