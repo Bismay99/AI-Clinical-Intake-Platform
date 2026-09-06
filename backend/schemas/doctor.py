@@ -144,3 +144,59 @@ class FinalizeResponse(BaseModel):
     audit_log_id: str
     reviewed_entity_count: int
     unreviewed_entity_count: int
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/dashboard/stats
+# ---------------------------------------------------------------------------
+class DoctorStats(BaseModel):
+    awaiting_review: int    # assigned encounters in ready_for_review
+    in_review: int          # assigned encounters in intake_in_progress or submitted (being worked on)
+    completed: int          # assigned encounters in completed
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/patients/search
+# ---------------------------------------------------------------------------
+class EncounterSummary(BaseModel):
+    encounter_id: str
+    queue_status: str
+    opd_department: Optional[str]
+    submitted_at: Optional[str]   # updated_at isoformat when status == ready_for_review
+    total_entities: int
+    unreviewed_count: int
+
+
+class PatientSearchResult(BaseModel):
+    patient_id: str
+    patient_name: str
+    date_of_birth: Optional[str]
+    gender: Optional[str]
+    preferred_language: str
+    encounters: List[EncounterSummary]
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/available
+# ---------------------------------------------------------------------------
+class AvailableEncounterItem(BaseModel):
+    encounter_id: str
+    patient_name: str
+    opd_department: Optional[str]
+    queue_status: str
+    created_at: str
+    updated_at: str
+    total_entities: int
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/patients/recommended
+# ---------------------------------------------------------------------------
+class RecommendedItem(BaseModel):
+    encounter_id: str
+    patient_id: str
+    patient_name: str
+    opd_department: Optional[str]
+    queue_status: str
+    updated_at: str
+    reason: str

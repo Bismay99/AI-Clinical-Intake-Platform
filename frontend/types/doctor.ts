@@ -10,3 +10,46 @@ export interface DocumentDetailResponse { id: string; encounter_id: string; docu
 export interface VerifyRequest { action: VerifyAction; new_value?: string | null; }
 export interface VerifyResponse { entity_id: string; field_name: string; action: string; verification_status: VerificationStatus; value: string; original_ai_value: string | null; reviewed_by: string; reviewed_at: string; }
 export interface FinalizeResponse { encounter_id: string; status: string; finalized_by: string; audit_log_id: string; reviewed_entity_count: number; unreviewed_entity_count: number; }
+
+// --- New: Dashboard Stats ---
+export interface DoctorStats { awaiting_review: number; in_review: number; completed: number; }
+
+// --- New: Patient Search ---
+export interface EncounterSummary {
+  encounter_id: string;
+  queue_status: string;
+  opd_department: string | null;
+  submitted_at: string | null;
+  total_entities: number;
+  unreviewed_count: number;
+}
+export interface PatientSearchResult {
+  patient_id: string;
+  patient_name: string;
+  date_of_birth: string | null;
+  gender: string | null;
+  preferred_language: string;
+  encounters: EncounterSummary[];
+}
+
+// --- New: Available Encounter Pool ---
+export interface AvailableEncounterItem {
+  encounter_id: string;
+  patient_name: string;
+  opd_department: string | null;
+  queue_status: string;
+  created_at: string;
+  updated_at: string;
+  total_entities: number;
+}
+
+// --- New: Recommended for Review ---
+export interface RecommendedItem {
+  encounter_id: string;
+  patient_id: string;
+  patient_name: string;
+  opd_department: string | null;
+  queue_status: string;
+  updated_at: string;
+  reason: string;
+}

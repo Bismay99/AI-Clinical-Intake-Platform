@@ -6,7 +6,11 @@ All runtime configuration lives here — nothing else should read os.environ dir
 """
 
 import os
+from typing import Optional
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -24,6 +28,18 @@ class Settings(BaseSettings):
 
     # Document storage
     upload_dir: str = "uploads"
+
+    # Google OAuth 2.0 / OpenID Connect
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+    google_redirect_uri: str = "http://localhost:8000/auth/google/callback"
+    frontend_url: str = "http://localhost:3000"
+
+    # CORS
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 
     model_config = SettingsConfigDict(
         env_file=".env",

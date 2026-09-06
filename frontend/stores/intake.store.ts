@@ -7,6 +7,8 @@ export interface ConversationEntry {
   question: string;
   fieldName: string;
   answer: string;
+  isVoice?: boolean;
+  detectedLanguage?: string | null;
   entities: ExtractedEntitySummary[];
   turnNumber: number;
 }
@@ -29,12 +31,19 @@ interface IntakeState {
   pathwayComplete: boolean;
   phase: IntakePhase;
 
-  // History
+  // History & extracted data
   conversationHistory: ConversationEntry[];
   allEntities: ExtractedEntitySummary[];
 
   // Submission result
   submitResult: IntakeSubmitResponse | null;
+
+  // Voice transient state
+  isVoiceRecording: boolean;
+  isVoiceUploading: boolean;
+  voiceError: string | null;
+  lastTranscript: string | null;
+  lastDetectedLanguage: string | null;
 
   // Loading / error
   isLoading: boolean;
@@ -49,8 +58,18 @@ interface IntakeState {
     firstQuestion: string | null;
     firstFieldName: string | null;
   }) => void;
-  applyTurnResponse: (answer: string, questionAsked: string, fieldAnswered: string, response: IntakeTurnResponse) => void;
+  applyTurnResponse: (
+    answer: string,
+    questionAsked: string,
+    fieldAnswered: string,
+    response: IntakeTurnResponse,
+    isVoice?: boolean
+  ) => void;
   applySubmitResponse: (response: IntakeSubmitResponse) => void;
+  setVoiceRecording: (recording: boolean) => void;
+  setVoiceUploading: (uploading: boolean) => void;
+  setVoiceError: (error: string | null) => void;
+  clearLastTranscript: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setPhase: (phase: IntakePhase) => void;
@@ -70,6 +89,11 @@ const initialState = {
   conversationHistory: [] as ConversationEntry[],
   allEntities: [] as ExtractedEntitySummary[],
   submitResult: null,
+  isVoiceRecording: false,
+  isVoiceUploading: false,
+  voiceError: null,
+  lastTranscript: null,
+  lastDetectedLanguage: null,
   isLoading: false,
   error: null,
 };
@@ -89,12 +113,15 @@ export const useIntakeStore = create<IntakeState>((set, get) => ({
       phase: "in_progress",
     }),
 
-  applyTurnResponse: (answer, questionAsked, fieldAnswered, r) => {
+  applyTurnResponse: (answer, questionAsked, fieldAnswered, r, isVoice = false) => {
     const prev = get();
+    const effectiveAnswer = isVoice && r.raw_transcript ? r.raw_transcript : answer;
     const entry: ConversationEntry = {
       question: questionAsked,
       fieldName: fieldAnswered,
-      answer,
+      answer: effectiveAnswer,
+      isVoice,
+      detectedLanguage: r.detected_language || null,
       entities: r.entities_extracted,
       turnNumber: r.turn_number,
     };
@@ -106,17 +133,26 @@ export const useIntakeStore = create<IntakeState>((set, get) => ({
       pathwayComplete: r.pathway_complete,
       conversationHistory: [...prev.conversationHistory, entry],
       allEntities: updatedEntities,
+      lastTranscript: r.raw_transcript || null,
+      lastDetectedLanguage: r.detected_language || null,
       isLoading: false,
+      isVoiceUploading: false,
       error: null,
-      phase: r.pathway_complete ? "in_progress" : "in_progress",
+      voiceError: null,
+      phase: "in_progress",
     });
   },
 
   applySubmitResponse: (result) =>
-    set({ submitResult: result, phase: "submitted", isLoading: false, error: null }),
+    set({ submitResult: result, phase: "submitted", isLoading: false, isVoiceUploading: false, error: null }),
+
+  setVoiceRecording: (recording) => set({ isVoiceRecording: recording }),
+  setVoiceUploading: (uploading) => set({ isVoiceUploading: uploading }),
+  setVoiceError: (error) => set({ voiceError: error, isVoiceUploading: false }),
+  clearLastTranscript: () => set({ lastTranscript: null, lastDetectedLanguage: null }),
 
   setLoading: (loading) => set({ isLoading: loading }),
-  setError: (error) => set({ error, isLoading: false }),
+  setError: (error) => set({ error, isLoading: false, isVoiceUploading: false }),
   setPhase: (phase) => set({ phase }),
   reset: () => set(initialState),
 }));

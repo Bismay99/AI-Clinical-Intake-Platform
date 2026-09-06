@@ -21,7 +21,7 @@ interface AuthState {
   hydrateFromStorage: () => string | null;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
   role: null,

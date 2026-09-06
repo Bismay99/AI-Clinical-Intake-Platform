@@ -59,6 +59,11 @@ from backend.schemas.doctor import (
     EntityDetail,
     VerifyRequest, VerifyResponse,
     FinalizeResponse,
+    DoctorStats,
+    EncounterSummary,
+    PatientSearchResult,
+    AvailableEncounterItem,
+    RecommendedItem,
 )
 
 router = APIRouter(prefix="/doctor", tags=["doctor"])
@@ -433,3 +438,282 @@ def finalize(
         reviewed_entity_count=reviewed_count,
         unreviewed_entity_count=unreviewed_count,
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/dashboard/stats
+# ---------------------------------------------------------------------------
+@router.get("/dashboard/stats", response_model=DoctorStats)
+def doctor_stats(
+    doctor: User = Depends(_require_doctor),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns aggregate counts of this doctor's assigned encounters by status.
+    Used for the dashboard overview cards.
+    """
+    awaiting = (
+        db.query(Encounter)
+        .filter(
+            Encounter.doctor_user_id == doctor.id,
+            Encounter.queue_status == EncounterStatus.ready_for_review,
+        )
+        .count()
+    )
+    in_rev = (
+        db.query(Encounter)
+        .filter(
+            Encounter.doctor_user_id == doctor.id,
+            Encounter.queue_status.in_([
+                EncounterStatus.intake_in_progress,
+                EncounterStatus.submitted,
+            ]),
+        )
+        .count()
+    )
+    done = (
+        db.query(Encounter)
+        .filter(
+            Encounter.doctor_user_id == doctor.id,
+            Encounter.queue_status == EncounterStatus.completed,
+        )
+        .count()
+    )
+    return DoctorStats(awaiting_review=awaiting, in_review=in_rev, completed=done)
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/patients/search?patient_uid={uid}
+# ---------------------------------------------------------------------------
+@router.get("/patients/search", response_model=PatientSearchResult)
+def search_patient(
+    patient_uid: str,
+    doctor: User = Depends(_require_doctor),
+    db: Session = Depends(get_db),
+):
+    """
+    Looks up a patient by their Patient.id (UUID / patient UID).
+
+    Authorization: the doctor must have at least one encounter assigned to them
+    for this patient (encounter.patient_id == patient.id AND
+    encounter.doctor_user_id == doctor.id). Otherwise returns 404.
+
+    This prevents UID-based enumeration of the entire patient database.
+    Patient UID is an identifier, not an access credential.
+    """
+    # Look up patient by id — do not reveal whether they exist on 404
+    patient = db.query(Patient).filter(Patient.id == patient_uid).first()
+    if patient is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="No authorized patient found for this UID.")
+
+    # Verify authorization: at least one encounter for this patient is assigned to this doctor
+    authorized_encounters = (
+        db.query(Encounter)
+        .filter(
+            Encounter.patient_id == patient.id,
+            Encounter.doctor_user_id == doctor.id,
+        )
+        .order_by(Encounter.updated_at.desc())
+        .all()
+    )
+    if not authorized_encounters:
+        # Doctor has no assigned encounter for this patient — 404 (anti-enumeration)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="No authorized patient found for this UID.")
+
+    encounter_summaries: List[EncounterSummary] = []
+    for enc in authorized_encounters:
+        total = (
+            db.query(ExtractedEntity)
+            .filter(ExtractedEntity.encounter_id == enc.id)
+            .count()
+        )
+        unreviewed = (
+            db.query(ExtractedEntity)
+            .filter(
+                ExtractedEntity.encounter_id == enc.id,
+                ExtractedEntity.verification_status == VerificationStatus.unreviewed,
+            )
+            .count()
+        )
+        encounter_summaries.append(EncounterSummary(
+            encounter_id=enc.id,
+            queue_status=enc.queue_status.value,
+            opd_department=enc.opd_department,
+            submitted_at=enc.updated_at.isoformat() if enc.queue_status in (
+                EncounterStatus.ready_for_review, EncounterStatus.completed
+            ) else None,
+            total_entities=total,
+            unreviewed_count=unreviewed,
+        ))
+
+    return PatientSearchResult(
+        patient_id=patient.id,
+        patient_name=patient.full_name,
+        date_of_birth=patient.date_of_birth,
+        gender=patient.gender,
+        preferred_language=patient.preferred_language,
+        encounters=encounter_summaries,
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/available
+# ---------------------------------------------------------------------------
+@router.get("/available", response_model=List[AvailableEncounterItem])
+def available_encounters(
+    doctor: User = Depends(_require_doctor),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns ready_for_review encounters not yet assigned to any doctor.
+    Any authorized doctor can self-assign from this pool via
+    POST /doctor/encounter/{id}/assign.
+
+    Note: In production, hospital scheduling systems would filter by department
+    and hospital. For now, the full unassigned pool is returned.
+    """
+    encounters = (
+        db.query(Encounter)
+        .filter(
+            Encounter.queue_status == EncounterStatus.ready_for_review,
+            Encounter.doctor_user_id.is_(None),
+        )
+        .order_by(Encounter.updated_at.desc())
+        .all()
+    )
+    result: List[AvailableEncounterItem] = []
+    for enc in encounters:
+        patient: Patient = enc.patient
+        patient_name = patient.full_name if patient else "Unknown"
+        total = (
+            db.query(ExtractedEntity)
+            .filter(ExtractedEntity.encounter_id == enc.id)
+            .count()
+        )
+        result.append(AvailableEncounterItem(
+            encounter_id=enc.id,
+            patient_name=patient_name,
+            opd_department=enc.opd_department,
+            queue_status=enc.queue_status.value,
+            created_at=enc.created_at.isoformat(),
+            updated_at=enc.updated_at.isoformat(),
+            total_entities=total,
+        ))
+    return result
+
+
+# ---------------------------------------------------------------------------
+# GET /doctor/patients/recommended
+# ---------------------------------------------------------------------------
+@router.get("/patients/recommended", response_model=List[RecommendedItem])
+def recommended_patients(
+    doctor: User = Depends(_require_doctor),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns a prioritized work-queue list for the doctor.
+
+    Priority order (all server-side authorized — no frontend filtering):
+      1. Assigned encounters in ready_for_review (awaiting doctor action)
+      2. Assigned encounters with unreviewed entities (needs attention)
+      3. Unassigned ready_for_review encounters (claimable pool)
+
+    Returns at most 10 items. Never exposes encounters the doctor is not
+    authorized to access.
+    """
+    recommended: List[RecommendedItem] = []
+    seen_encounter_ids: set = set()
+
+    # Priority 1: Assigned + awaiting review
+    awaiting = (
+        db.query(Encounter)
+        .filter(
+            Encounter.doctor_user_id == doctor.id,
+            Encounter.queue_status == EncounterStatus.ready_for_review,
+        )
+        .order_by(Encounter.updated_at.desc())
+        .limit(5)
+        .all()
+    )
+    for enc in awaiting:
+        if enc.id in seen_encounter_ids:
+            continue
+        seen_encounter_ids.add(enc.id)
+        patient: Patient = enc.patient
+        recommended.append(RecommendedItem(
+            encounter_id=enc.id,
+            patient_id=enc.patient_id,
+            patient_name=patient.full_name if patient else "Unknown",
+            opd_department=enc.opd_department,
+            queue_status=enc.queue_status.value,
+            updated_at=enc.updated_at.isoformat(),
+            reason="Assigned to you — awaiting review",
+        ))
+
+    # Priority 2: Assigned encounters with unreviewed entities (not already added)
+    if len(recommended) < 10:
+        with_unreviewed = (
+            db.query(Encounter)
+            .filter(
+                Encounter.doctor_user_id == doctor.id,
+                Encounter.queue_status != EncounterStatus.completed,
+            )
+            .order_by(Encounter.updated_at.desc())
+            .all()
+        )
+        for enc in with_unreviewed:
+            if enc.id in seen_encounter_ids:
+                continue
+            unreviewed_count = (
+                db.query(ExtractedEntity)
+                .filter(
+                    ExtractedEntity.encounter_id == enc.id,
+                    ExtractedEntity.verification_status == VerificationStatus.unreviewed,
+                )
+                .count()
+            )
+            if unreviewed_count > 0:
+                seen_encounter_ids.add(enc.id)
+                patient: Patient = enc.patient
+                recommended.append(RecommendedItem(
+                    encounter_id=enc.id,
+                    patient_id=enc.patient_id,
+                    patient_name=patient.full_name if patient else "Unknown",
+                    opd_department=enc.opd_department,
+                    queue_status=enc.queue_status.value,
+                    updated_at=enc.updated_at.isoformat(),
+                    reason=f"{unreviewed_count} unreviewed field(s) need attention",
+                ))
+                if len(recommended) >= 10:
+                    break
+
+    # Priority 3: Unassigned pool (claimable)
+    if len(recommended) < 10:
+        pool = (
+            db.query(Encounter)
+            .filter(
+                Encounter.queue_status == EncounterStatus.ready_for_review,
+                Encounter.doctor_user_id.is_(None),
+            )
+            .order_by(Encounter.updated_at.desc())
+            .limit(10 - len(recommended))
+            .all()
+        )
+        for enc in pool:
+            if enc.id in seen_encounter_ids:
+                continue
+            seen_encounter_ids.add(enc.id)
+            patient: Patient = enc.patient
+            recommended.append(RecommendedItem(
+                encounter_id=enc.id,
+                patient_id=enc.patient_id,
+                patient_name=patient.full_name if patient else "Unknown",
+                opd_department=enc.opd_department,
+                queue_status=enc.queue_status.value,
+                updated_at=enc.updated_at.isoformat(),
+                reason="Recently submitted pre-consultation",
+            ))
+
+    return recommended[:10]

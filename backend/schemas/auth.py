@@ -21,6 +21,10 @@ class TokenResponse(BaseModel):
     user_id: str
 
 
+class ExchangeTicketRequest(BaseModel):
+    ticket: str
+
+
 class RegisterRequest(BaseModel):
     """Used internally for seeding/demo — not exposed as a public endpoint in production."""
     email: EmailStr

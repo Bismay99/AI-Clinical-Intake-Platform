@@ -79,13 +79,18 @@ def handle_intake_turn(request: IntakeRequest) -> IntakeResponse:
     turn_index = len(request.history)
     draft_entities: List[ExtractedEntity] = []
     if normalized_text:
-        draft_entities = extract_from_intake_turn(
-            intake_session_id=request.encounter_id,
-            turn_index=turn_index,
-            patient_text=normalized_text,
-            expected_fields=schema.required_fields,
-            asr_confidence=asr_confidence,
-        )
+        try:
+            draft_entities = extract_from_intake_turn(
+                intake_session_id=request.encounter_id,
+                turn_index=turn_index,
+                patient_text=normalized_text,
+                expected_fields=schema.required_fields,
+                asr_confidence=asr_confidence,
+            )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("Extraction failed during intake turn: %s", exc)
+            draft_entities = []
 
     updated_history = request.history + [
         IntakeTurn(

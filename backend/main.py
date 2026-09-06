@@ -11,13 +11,16 @@ Architecture note (per implementation plan):
 
 import os
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+load_dotenv()
 
 from backend.config import settings
 from backend.models import Base       # imports all ORM models, registers them with Base.metadata
 from backend.database import get_engine
-from backend.routers import health, auth, patients, encounters, intake, doctor
+from backend.routers import health, auth, patients, encounters, intake, doctor, reports
 
 
 # ---------------------------------------------------------------------------
@@ -56,11 +59,16 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# CORS (permissive for MVP/dev; restrict origins in production)
+# CORS
+# Explicit origins required when allow_credentials=True.
 # ---------------------------------------------------------------------------
+cors_origins = list(settings.cors_origins)
+if settings.frontend_url and settings.frontend_url not in cors_origins:
+    cors_origins.append(settings.frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.app_env == "development" else [],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -75,6 +83,7 @@ app.include_router(patients.router)
 app.include_router(encounters.router)
 app.include_router(intake.router)
 app.include_router(doctor.router)
+app.include_router(reports.router)
 
 
 # ---------------------------------------------------------------------------

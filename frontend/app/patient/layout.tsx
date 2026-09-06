@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Mic, FileText, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Mic, ClipboardList, FileText, User, LogOut } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/patient/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/patient/intake", label: "Pre-Consultation", icon: Mic },
+  { href: "/patient/reports", label: "Health Reports", icon: ClipboardList },
   { href: "/patient/documents", label: "Documents", icon: FileText },
   { href: "/patient/profile", label: "Profile", icon: User },
 ];

@@ -22,7 +22,7 @@ import { Spinner } from "@/components/ui/Spinner";
  * - Wrong-role access → redirected to correct dashboard
  */
 
-const PUBLIC_PATHS = ["/", "/login"];
+const PUBLIC_PATHS = ["/", "/login", "/auth/callback"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();

@@ -1,5 +1,5 @@
 "use client";
-import { User, Stethoscope } from "lucide-react";
+import { User, Stethoscope, Mic } from "lucide-react";
 import type { ConversationEntry } from "@/stores/intake.store";
 
 interface Props {
@@ -26,7 +26,21 @@ export function ConversationHistory({ history }: Props) {
           {/* Patient answer */}
           <div className="flex items-start gap-3 pl-11">
             <div className="flex-1 bg-[#155EEF] bg-opacity-5 border border-blue-100 rounded-xl px-4 py-3">
-              <p className="text-sm text-[#172033]">{entry.answer}</p>
+              {entry.isVoice && (
+                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-[#155EEF]">
+                    <Mic className="w-3 h-3" /> Voice answer
+                  </span>
+                  {entry.detectedLanguage && (
+                    <span className="text-xs text-[#667085] bg-white px-2 py-0.5 rounded border border-[#E4E7EC]">
+                      Language: {entry.detectedLanguage}
+                    </span>
+                  )}
+                </div>
+              )}
+              <p className="text-sm text-[#172033]">
+                {entry.isVoice ? `"${entry.answer}"` : entry.answer}
+              </p>
             </div>
             <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
               <User className="w-4 h-4 text-[#667085]" />
