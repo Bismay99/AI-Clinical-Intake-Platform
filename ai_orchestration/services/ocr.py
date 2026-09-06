@@ -215,16 +215,22 @@ _PADDLE_OCR_INSTANCE = None
 def get_paddle_ocr_client(lang: str = "en"):
     """
     Returns a cached instance of PaddleOCR configured for CPU inference.
-    Uses enable_mkldnn=False to ensure stable execution across Windows CPU architectures.
+    Optimized flags:
+      - enable_mkldnn=False: ensures stable execution across Windows CPU architectures
+      - use_doc_orientation_classify=False: skips heavy document unwarping/rotation models
+      - use_doc_unwarping=False: skips costly 3D unwarping neural net
+      - use_textline_orientation=False: runs straight detection & recognition directly
     """
     global _PADDLE_OCR_INSTANCE
     if _PADDLE_OCR_INSTANCE is None:
         try:
             from paddleocr import PaddleOCR
             _PADDLE_OCR_INSTANCE = PaddleOCR(
-                use_textline_orientation=True,
-                lang=lang,
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
                 enable_mkldnn=False,
+                lang=lang,
             )
         except Exception as exc:
             raise OcrApiError(f"Failed to initialize local PaddleOCR engine: {exc}") from exc
@@ -251,11 +257,56 @@ def _extract_with_paddleocr(
     client: Optional[Any] = None,
 ) -> List[OcrBlock]:
     """
-    Runs real OCR inference via local PaddleOCR.
+    Runs text extraction and OCR inference for documents.
+    1. For PDFs with embedded text layers, extracts high-fidelity text blocks and bounding
+       rectangles instantly via pypdfium2 textpage.
+    2. For scanned/image-only PDFs or image bytes, renders pages and executes local PaddleOCR.
     Processes image bytes, executes text detection and recognition,
     and returns OcrBlock items preserving full text, bounding boxes, and confidence.
     """
-    # 1. Decode bytes to numpy images (handling both PDF and standard images)
+    ocr_blocks: List[OcrBlock] = []
+
+    # Fast path: Check if document is a PDF
+    if file_bytes.startswith(b"%PDF") or b"%PDF" in file_bytes[:1024]:
+        try:
+            import pypdfium2 as pdfium
+            pdf = pdfium.PdfDocument(file_bytes)
+            has_native_text = False
+
+            for page_idx, page in enumerate(pdf, start=1):
+                textpage = page.get_textpage()
+                num_rects = textpage.count_rects()
+                if num_rects > 0:
+                    for rect_idx in range(num_rects):
+                        rect = textpage.get_rect(rect_idx)
+                        rect_text = textpage.get_text_bounded(*rect).strip()
+                        if not rect_text:
+                            continue
+                        has_native_text = True
+                        region_str = f"page:{page_idx}/bbox:({int(rect[0])},{int(rect[1])}),({int(rect[2])},{int(rect[3])})"
+                        ocr_blocks.append(
+                            OcrBlock(
+                                text=rect_text,
+                                page=page_idx,
+                                region=region_str,
+                                raw_confidence=0.99,
+                                metadata={
+                                    "provider": "pypdfium2_native",
+                                    "document_type": document_type,
+                                    "block_index": len(ocr_blocks) + 1,
+                                },
+                            )
+                        )
+            pdf.close()
+
+            # If embedded text was successfully extracted, return immediately
+            if has_native_text and ocr_blocks:
+                return ocr_blocks
+        except Exception:
+            # Fall back to rasterizing and running PaddleOCR below
+            ocr_blocks.clear()
+
+    # Scanned PDF or Image: Decode to numpy images and run PaddleOCR
     try:
         from PIL import Image
         import numpy as np
@@ -266,8 +317,8 @@ def _extract_with_paddleocr(
 
             pdf = pdfium.PdfDocument(file_bytes)
             for page_idx, page in enumerate(pdf, start=1):
-                # Render page at 2x resolution (144 dpi) for high-accuracy OCR
-                pil_page = page.render(scale=2).to_pil().convert("RGB")
+                # Render page at 1x resolution (72-96 dpi) for fast, accurate neural OCR
+                pil_page = page.render(scale=1).to_pil().convert("RGB")
                 images_np.append((page_idx, np.array(pil_page)))
             pdf.close()
         else:
@@ -279,9 +330,8 @@ def _extract_with_paddleocr(
     if not images_np:
         return []
 
-    # 2. Run inference across all pages
+    # Run inference across all pages
     ocr_engine = client or get_paddle_ocr_client(lang=language_hint or "en")
-    ocr_blocks: List[OcrBlock] = []
 
     try:
         for page_idx, img_np in images_np:

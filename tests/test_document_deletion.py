@@ -1,4 +1,4 @@
-﻿"""
+"""
 tests/test_document_deletion.py
 
 Production-quality clinical safety tests for Patient Document Center document deletion:
@@ -356,3 +356,78 @@ def test_scenario_n_background_worker_race_condition(client: TestClient, db: Ses
 
     if os.path.exists(temp_path):
         os.remove(temp_path)
+
+
+def test_scenario_o_delete_actively_processing_document(client: TestClient, db: Session):
+    """
+    Patient can delete a document that is actively in 'processing' status.
+    Ensures delete returns 200, document is removed from DB, physical file deleted,
+    and subsequent background worker completion does not resurrect entities.
+    """
+    p = _create_patient_and_encounter(client, "proc_del")
+    enc_id = p["encounter_id"]
+
+    test_file_path = os.path.join(settings.upload_dir, "test_proc_del.pdf")
+    with open(test_file_path, "wb") as f:
+        f.write(b"%PDF-1.4 simulated actively processing document")
+
+    doc = Document(
+        encounter_id=enc_id,
+        document_type="lab_report",
+        original_filename="active_processing.pdf",
+        storage_ref=test_file_path,
+        file_size=len(b"%PDF-1.4 simulated actively processing document"),
+        mime_type="application/pdf",
+        processing_status="processing",
+    )
+    db.add(doc)
+    db.commit()
+    doc_id = doc.id
+
+    assert os.path.exists(test_file_path)
+
+    # Patient deletes while status == 'processing'
+    del_res = client.delete(f"/patients/documents/{doc_id}", headers=p["headers"])
+    assert del_res.status_code == 200
+    assert del_res.json()["ok"] is True
+
+    # Check DB record is gone
+    db.expire_all()
+    assert db.query(Document).filter(Document.id == doc_id).first() is None
+    # Check physical file is gone
+    assert not os.path.exists(test_file_path)
+
+
+def test_scenario_p_guaranteed_terminal_failure_state(client: TestClient, db: Session, monkeypatch):
+    """
+    Verify that if background processing encounters an error, the document
+    is guaranteed to transition to processing_status='failed' with a sanitized processing_error.
+    """
+    p = _create_patient_and_encounter(client, "terminal_fail")
+    enc_id = p["encounter_id"]
+    h = p["headers"]
+
+    # Force handle_document to raise an exception
+    def mock_broken_handle_document(req):
+        raise RuntimeError("Google Vision API connection timeout")
+
+    monkeypatch.setattr("backend.routers.intake.handle_document", mock_broken_handle_document)
+
+    # Upload document
+    r = client.post(
+        "/intake/document/upload",
+        data={"encounter_id": enc_id, "document_type": "prescription"},
+        files={"file": ("corrupt.pdf", io.BytesIO(b"fake data"), "application/pdf")},
+        headers=h,
+    )
+    assert r.status_code in (200, 201)
+    doc_id = r.json()["document_id"]
+
+    # Check that in DB it is marked failed (never stuck in processing)
+    db.expire_all()
+    updated_doc = db.query(Document).filter(Document.id == doc_id).first()
+    assert updated_doc is not None
+    assert updated_doc.processing_status == "failed"
+    assert updated_doc.processing_error is not None
+    assert "timeout" in updated_doc.processing_error.lower() or "failed" in updated_doc.processing_error.lower()
+

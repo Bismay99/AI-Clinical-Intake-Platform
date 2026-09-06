@@ -343,36 +343,62 @@ def process_document_background(
     document_type: str,
     file_bytes: bytes,
     language_hint: str,
+    db: Optional[Session] = None,
 ):
     """
     Background worker that runs OCR, Gemini extraction, entity persistence,
     and updates document processing_status asynchronously.
+    Guarantees transition to terminal status ('processed' or 'failed').
     """
+    logger.info("[DOCUMENT DEBUG] background task started: doc_id=%s, enc_id=%s", document_id, encounter_id)
     session_factory = _get_session_factory()
-    db = session_factory()
+    managed_externally = db is not None
+    if db is None:
+        db = session_factory()
     try:
         doc = db.query(Document).filter(Document.id == document_id).first()
         if not doc:
-            logger.error("Background document processor: document %s not found", document_id)
+            logger.error("[DOCUMENT DEBUG] document %s not found in DB at background start; aborting", document_id)
             return
+
+        logger.info("[DOCUMENT DEBUG] document loaded: id=%s, original_filename=%s", doc.id, doc.original_filename)
+
+        # Ensure file_bytes is valid; if empty, attempt reading from storage_ref
+        actual_bytes = file_bytes
+        if (not actual_bytes or len(actual_bytes) == 0) and doc.storage_ref:
+            storage_path = doc.storage_ref
+            if not os.path.isabs(storage_path):
+                storage_path = os.path.abspath(storage_path)
+            if os.path.exists(storage_path):
+                logger.info("[DOCUMENT DEBUG] storage file located at %s; reading bytes", storage_path)
+                with open(storage_path, "rb") as f_in:
+                    actual_bytes = f_in.read()
+
+        if not actual_bytes or len(actual_bytes) == 0:
+            raise ValueError(f"Document file bytes missing or unreadable for {document_id}")
 
         brain_request = BrainDocumentRequest(
             encounter_id=encounter_id,
             document_id=document_id,
             document_type=document_type,
-            file_bytes=file_bytes,
+            file_bytes=actual_bytes,
             language_hint=language_hint,
         )
 
+        logger.info("[DOCUMENT DEBUG] OCR & Gemini extraction started for %s", document_id)
         brain_response = handle_document(brain_request)
+        logger.info(
+            "[DOCUMENT DEBUG] OCR & Gemini extraction completed: %d draft entities extracted",
+            len(brain_response.draft_entities),
+        )
 
-        # ── RACE CONDITION GUARD (Section 9) ──
-        # Double check document existence and active status right before persistence.
-        # If patient deleted document while OCR or Gemini extraction was running, active_doc will be None.
+        # ── RACE CONDITION GUARD (Section 9 & 13) ──
+        # Check document existence and active status immediately before persistence.
+        # If patient deleted document while extraction was running, active_doc will be None.
         active_doc = db.query(Document).filter(Document.id == document_id).first()
         if not active_doc:
             logger.info(
-                "Background document processor: document %s was deleted during processing. Aborting entity persistence.",
+                "[DOCUMENT DEBUG] document %s was deleted during processing. Aborting entity persistence.",
                 document_id,
             )
             return
@@ -381,11 +407,12 @@ def process_document_background(
         encounter = db.query(Encounter).filter(Encounter.id == encounter_id).first()
         if not encounter or encounter.queue_status == EncounterStatus.completed:
             logger.warning(
-                "Background document processor: encounter %s is completed or missing. Aborting entity persistence.",
+                "[DOCUMENT DEBUG] encounter %s is completed or missing. Aborting entity persistence.",
                 encounter_id,
             )
             return
 
+        logger.info("[DOCUMENT DEBUG] persistence started for %s", document_id)
         for contract_entity in brain_response.draft_entities:
             db_entity = contract_entity_to_db(
                 contract=contract_entity,
@@ -398,29 +425,68 @@ def process_document_background(
         active_doc.processing_error = None
         db.commit()
         logger.info(
-            "Background extraction complete for document %s: %d entities persisted",
+            "[DOCUMENT DEBUG] processing status=processed: document %s (%d entities persisted)",
             document_id,
             len(brain_response.draft_entities),
         )
     except Exception as exc:
-        logger.warning("Background extraction failed for document %s: %s", document_id, exc)
-        db.rollback()
-        # Re-fetch doc to update status to failed
+        logger.error(
+            "[DOCUMENT DEBUG] processing failed: document_id=%s, error_type=%s, error=%s",
+            document_id,
+            type(exc).__name__,
+            exc,
+            exc_info=True,
+        )
         try:
-            doc = db.query(Document).filter(Document.id == document_id).first()
-            if doc:
-                doc.processing_status = "failed"
-                if "429" in str(exc) or "RESOURCE_EXHAUSTED" in str(exc):
-                    doc.processing_error = "AI clinical extraction rate limit exceeded. Please retry in a moment."
-                elif "quota" in str(exc).lower():
-                    doc.processing_error = "AI quota exceeded. Please check provider quota."
-                else:
-                    doc.processing_error = "Clinical extraction failed during AI parsing."
-                db.commit()
+            db.rollback()
+        except Exception:
+            pass
+
+        # Terminal state guarantee: Ensure document reaches 'failed' status
+        try:
+            if managed_externally:
+                fail_doc = db.query(Document).filter(Document.id == document_id).first()
+                if fail_doc:
+                    fail_doc.processing_status = "failed"
+                    err_str = str(exc)
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                        fail_doc.processing_error = "AI clinical extraction rate limit exceeded. Please retry in a moment."
+                    elif "quota" in err_str.lower():
+                        fail_doc.processing_error = "AI quota exceeded. Please check provider quota."
+                    elif "LLM_API_KEY" in err_str:
+                        fail_doc.processing_error = "AI service configuration error. Please contact clinic administrator."
+                    else:
+                        fail_doc.processing_error = "Clinical extraction failed during document parsing."
+                    db.commit()
+                    logger.info("[DOCUMENT DEBUG] document %s marked as failed: %s", document_id, fail_doc.processing_error)
+            else:
+                # Reopen fresh session if previous session failed
+                db_fail = session_factory()
+                try:
+                    fail_doc = db_fail.query(Document).filter(Document.id == document_id).first()
+                    if fail_doc:
+                        fail_doc.processing_status = "failed"
+                        err_str = str(exc)
+                        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                            fail_doc.processing_error = "AI clinical extraction rate limit exceeded. Please retry in a moment."
+                        elif "quota" in err_str.lower():
+                            fail_doc.processing_error = "AI quota exceeded. Please check provider quota."
+                        elif "LLM_API_KEY" in err_str:
+                            fail_doc.processing_error = "AI service configuration error. Please contact clinic administrator."
+                        else:
+                            fail_doc.processing_error = "Clinical extraction failed during document parsing."
+                        db_fail.commit()
+                        logger.info("[DOCUMENT DEBUG] document %s marked as failed: %s", document_id, fail_doc.processing_error)
+                finally:
+                    db_fail.close()
         except Exception as inner_exc:
-            logger.error("Failed to mark document %s as failed: %s", document_id, inner_exc)
+            logger.error("[DOCUMENT DEBUG] Failed to mark document %s as failed: %s", document_id, inner_exc)
     finally:
-        db.close()
+        if not managed_externally:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------

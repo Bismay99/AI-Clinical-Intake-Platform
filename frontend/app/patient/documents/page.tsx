@@ -485,7 +485,7 @@ export default function PatientDocumentsPage() {
                             <FileCheck2 className="w-3 h-3" />
                           )}
                           <span className="capitalize">
-                            {isProcessing ? "AI Extracting..." : (doc.processing_status || "Processed")}
+                            {isProcessing ? "AI Extracting..." : isFailed ? "Extraction Failed" : (doc.processing_status || "Processed")}
                           </span>
                         </span>
 
