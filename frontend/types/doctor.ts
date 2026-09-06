@@ -95,3 +95,17 @@ export interface RecommendedItem {
   updated_at: string;
   reason: string;
 }
+
+export interface DoctorProfileUpdate {
+  full_name?: string | null;
+  hospital_affiliation?: string | null;
+}
+
+export interface DoctorProfileResponse {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  hospital_affiliation: string | null;
+  is_active: boolean;
+}

@@ -12,6 +12,7 @@ interface AuthState {
   isInitializing: boolean;
 
   setAuth: (token: string, user: UserResponse) => void;
+  setUser: (user: UserResponse) => void;
   logout: () => void;
   setInitializing: (v: boolean) => void;
   /**
@@ -38,6 +39,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       userId: user.id,
       isAuthenticated: true,
       isInitializing: false,
+    });
+  },
+
+  setUser: (user) => {
+    set({
+      user,
+      role: user.role as UserRole,
+      userId: user.id,
     });
   },
 

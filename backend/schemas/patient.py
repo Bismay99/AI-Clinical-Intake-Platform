@@ -17,6 +17,15 @@ class PatientProfileCreate(BaseModel):
     hospital_identifier: Optional[str] = None  # external HIS ID
 
 
+class PatientProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    date_of_birth: Optional[str] = None       # YYYY-MM-DD
+    gender: Optional[str] = None
+    phone: Optional[str] = None
+    preferred_language: Optional[str] = None
+    hospital_identifier: Optional[str] = None  # external HIS ID
+
+
 class PatientProfileResponse(BaseModel):
     id: str
     user_id: str

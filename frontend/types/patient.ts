@@ -1,4 +1,5 @@
 export interface PatientProfileCreate { full_name: string; date_of_birth?: string | null; gender?: string | null; phone?: string | null; preferred_language: string; hospital_identifier?: string | null; }
+export interface PatientProfileUpdate { full_name?: string | null; date_of_birth?: string | null; gender?: string | null; phone?: string | null; preferred_language?: string | null; hospital_identifier?: string | null; }
 export interface PatientProfileResponse { id: string; user_id: string; full_name: string; date_of_birth: string | null; gender: string | null; phone: string | null; preferred_language: string; hospital_identifier: string | null; }
 export type EncounterStatus = "registered" | "intake_in_progress" | "ready_for_review" | "completed";
 export interface EncounterCreate { opd_department?: string | null; scheduled_at?: string | null; }

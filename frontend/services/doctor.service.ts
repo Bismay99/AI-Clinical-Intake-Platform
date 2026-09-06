@@ -3,6 +3,7 @@ import type {
   AssignResponse, DoctorQueueResponse, SummaryDetailResponse, TimelineEventResponse,
   DocumentDetailResponse, EntityDetail, VerifyRequest, VerifyResponse, FinalizeResponse,
   DoctorStats, PatientSearchResult, AvailableEncounterItem, RecommendedItem,
+  DoctorProfileUpdate, DoctorProfileResponse,
 } from "@/types/doctor";
 
 export async function assignEncounter(encounterId: string): Promise<AssignResponse> {
@@ -48,4 +49,13 @@ export async function getAvailableEncounters(): Promise<AvailableEncounterItem[]
 // --- New: Recommended for Review ---
 export async function getRecommended(): Promise<RecommendedItem[]> {
   return apiGet<RecommendedItem[]>("/doctor/patients/recommended");
+}
+
+// --- Profile Management ---
+export async function getDoctorProfile(): Promise<DoctorProfileResponse> {
+  return apiGet<DoctorProfileResponse>("/doctor/profile");
+}
+
+export async function updateDoctorProfile(payload: DoctorProfileUpdate): Promise<DoctorProfileResponse> {
+  return apiPatch<DoctorProfileResponse>("/doctor/profile", payload);
 }

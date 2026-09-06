@@ -213,3 +213,22 @@ class RecommendedItem(BaseModel):
     queue_status: str
     updated_at: str
     reason: str
+
+
+# ---------------------------------------------------------------------------
+# Profile Management: GET /doctor/profile & PATCH /doctor/profile
+# ---------------------------------------------------------------------------
+class DoctorProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    hospital_affiliation: Optional[str] = None
+
+
+class DoctorProfileResponse(BaseModel):
+    id: str
+    email: str
+    full_name: Optional[str]
+    role: str
+    hospital_affiliation: Optional[str]
+    is_active: bool
+
+    model_config = {"from_attributes": True}

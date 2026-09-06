@@ -64,6 +64,8 @@ from backend.schemas.doctor import (
     PatientSearchResult,
     AvailableEncounterItem,
     RecommendedItem,
+    DoctorProfileUpdate,
+    DoctorProfileResponse,
 )
 
 router = APIRouter(prefix="/doctor", tags=["doctor"])
@@ -846,3 +848,42 @@ def recommended_patients(
             ))
 
     return recommended[:10]
+
+
+# ---------------------------------------------------------------------------
+# Profile Management
+# ---------------------------------------------------------------------------
+@router.get("/profile", response_model=DoctorProfileResponse)
+def get_doctor_profile(
+    current_user: User = Depends(_require_doctor),
+):
+    """Returns the authenticated doctor's profile."""
+    return current_user
+
+
+@router.patch("/profile", response_model=DoctorProfileResponse)
+def update_doctor_profile(
+    payload: DoctorProfileUpdate,
+    current_user: User = Depends(_require_doctor),
+    db: Session = Depends(get_db),
+):
+    """
+    Updates the authenticated doctor's profile.
+    Strictly scoped to the JWT authenticated doctor user.
+    """
+    if payload.full_name is not None:
+        name = payload.full_name.strip()
+        if not name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Full name cannot be blank.",
+            )
+        current_user.full_name = name
+
+    if payload.hospital_affiliation is not None:
+        affil = payload.hospital_affiliation.strip()
+        current_user.hospital_affiliation = affil or None
+
+    db.flush()
+    db.refresh(current_user)
+    return current_user

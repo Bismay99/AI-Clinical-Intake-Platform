@@ -1,5 +1,5 @@
-import { apiGet, apiPost } from "@/lib/api";
-import type { PatientProfileCreate, PatientProfileResponse, EncounterCreate, EncounterResponse } from "@/types/patient";
+import { apiGet, apiPost, apiPatch } from "@/lib/api";
+import type { PatientProfileCreate, PatientProfileUpdate, PatientProfileResponse, EncounterCreate, EncounterResponse } from "@/types/patient";
 
 /** POST /patients/profile */
 export async function createPatientProfile(payload: PatientProfileCreate): Promise<PatientProfileResponse> {
@@ -9,6 +9,11 @@ export async function createPatientProfile(payload: PatientProfileCreate): Promi
 /** GET /patients/profile */
 export async function getPatientProfile(): Promise<PatientProfileResponse> {
   return apiGet<PatientProfileResponse>("/patients/profile");
+}
+
+/** PATCH /patients/profile */
+export async function updatePatientProfile(payload: PatientProfileUpdate): Promise<PatientProfileResponse> {
+  return apiPatch<PatientProfileResponse>("/patients/profile", payload);
 }
 
 /** POST /encounters */
