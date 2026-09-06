@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,6 +14,8 @@ import {
   AlertCircle,
   Building2,
   ArrowRight,
+  User,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
@@ -49,7 +51,7 @@ function parseUrlError(error: string | null, detail: string | null): string | nu
     case "doctor_account_required":
       return "Doctor portal access requires a verified hospital doctor account. Google accounts without pre-authorized doctor credentials cannot sign into the doctor workstation.";
     case "unauthorized_doctor":
-      return "This Google account is not mapped to an active hospital physician. Please sign in with your hospital-issued credentials.";
+      return "This account is not mapped to an active hospital physician. Please sign in with your hospital-issued credentials.";
     case "unverified_email":
       return "Your Google email address is unverified. Please verify your Google email before signing in.";
     case "invalid_state":
@@ -66,25 +68,56 @@ function parseUrlError(error: string | null, detail: string | null): string | nu
   }
 }
 
+type AuthMode = "patient" | "doctor";
+
+const VALID_HOSPITAL_CODES = [
+  "HOSP-AIIMS-CARDIO",
+  "HOSP-AIIMS-DELHI",
+  "HOSP-4701",
+  "HOSP-APOLLO-GEN",
+  "AIIMS-DELHI",
+  "HOSP-9842",
+  "GENERAL-OPD",
+];
+
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
 
+  const initialRoleParam = searchParams.get("role") || searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<AuthMode>(
+    initialRoleParam === "doctor" ? "doctor" : "patient"
+  );
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [hospitalCode, setHospitalCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const roleParam = searchParams.get("role") || searchParams.get("tab");
+    if (roleParam === "doctor") {
+      setActiveTab("doctor");
+    } else if (roleParam === "patient") {
+      setActiveTab("patient");
+    }
+  }, [searchParams]);
+
   const urlError = parseUrlError(searchParams.get("error"), searchParams.get("detail"));
   const error = formError || urlError;
+
+  const handleTabChange = (tab: AuthMode) => {
+    setActiveTab(tab);
+    setFormError(null);
+  };
 
   const handleGoogleSignIn = () => {
     setFormError(null);
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     const cleanUrl = baseUrl.replace(/\/$/, "");
-    // Role is determined authoritatively by the backend upon exchange
     window.location.assign(`${cleanUrl}/auth/google`);
   };
 
@@ -95,32 +128,57 @@ function LoginFormContent() {
       return;
     }
 
+    if (activeTab === "doctor") {
+      const code = hospitalCode.trim().toUpperCase();
+      const isValidFormat =
+        VALID_HOSPITAL_CODES.includes(code) || (code.startsWith("HOSP-") && code.length >= 6);
+      if (!isValidFormat) {
+        setFormError(
+          "Invalid Hospital Code. Please enter your authorized hospital code (e.g. HOSP-AIIMS-CARDIO)."
+        );
+        return;
+      }
+    }
+
     setIsLoading(true);
     setFormError(null);
 
     try {
-      // 1. Submit login request
       const tokenResp = await login({ email: email.trim(), password });
-
-      // 2. Fetch authoritative user profile to check role
       const user = await getMe(tokenResp.access_token);
 
-      // 3. Block doctors from logging in on the patient portal — show invalid credentials
-      if (user.role === "doctor" || tokenResp.role === "doctor") {
-        setFormError("Invalid email or password. Please verify your credentials and try again.");
-        setIsLoading(false);
-        return;
-      }
+      if (activeTab === "patient") {
+        if (user.role === "doctor" || tokenResp.role === "doctor") {
+          setFormError("Invalid email or password. Please verify your credentials and try again.");
+          setIsLoading(false);
+          return;
+        }
 
-      // 4. Persist access token and set patient auth
-      storeToken(tokenResp.access_token);
-      setAuth(tokenResp.access_token, user);
-      router.push("/patient/dashboard");
+        storeToken(tokenResp.access_token);
+        setAuth(tokenResp.access_token, user);
+        router.push("/patient/dashboard");
+      } else {
+        if (user.role !== "doctor" && tokenResp.role !== "doctor") {
+          setFormError(
+            "This workstation portal is restricted to authorized physicians and clinical staff. Please switch to the Patient toggle."
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        storeToken(tokenResp.access_token);
+        setAuth(tokenResp.access_token, user);
+        router.push("/doctor/dashboard");
+      }
     } catch (err: unknown) {
       console.error("Login failed:", err);
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          setFormError("Invalid email or password. Please verify your credentials and try again.");
+          setFormError(
+            activeTab === "doctor"
+              ? "Invalid email or password. Please verify your hospital credentials."
+              : "Invalid email or password. Please verify your credentials and try again."
+          );
         } else if (err.status === 403) {
           setFormError("Your account has been deactivated or restricted. Please contact your hospital administrator.");
         } else {
@@ -140,7 +198,7 @@ function LoginFormContent() {
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#0D1117]">
       {/* ── LEFT PANEL: Clinical Platform Identity & Trust ── */}
       <div className="lg:w-7/12 xl:w-3/5 bg-[#0D1117] text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden border-r border-[#1E293B]">
-        {/* Subtle clinical glow — teal, not blue */}
+        {/* Subtle clinical glow — teal */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#0D5C75]/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#0D5C75]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -235,18 +293,71 @@ function LoginFormContent() {
         </div>
       </div>
 
-      {/* ── RIGHT PANEL: Authentication Card ── */}
+      {/* ── RIGHT PANEL: Coordinated Authentication Card ── */}
       <div className="lg:w-5/12 xl:w-2/5 bg-[var(--bg-canvas)] flex items-center justify-center p-6 sm:p-10 lg:p-12">
-        <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-lg border border-[var(--ink-200)] shadow-[var(--shadow-md)] p-8 sm:p-10 space-y-6">
-          {/* Card Header */}
-          <div className="space-y-1">
-            <div className="inline-flex items-center justify-center w-11 h-11 rounded-lg bg-[var(--clinical-light)] text-[var(--clinical)] mb-2 border border-[var(--clinical-mid)]">
-              <Lock className="w-5 h-5" />
+        <div className="w-full max-w-md bg-[var(--bg-surface)] rounded-lg border border-[var(--ink-200)] shadow-[var(--shadow-md)] p-8 sm:p-10 space-y-6 animate-login-panel">
+          {/* Card Top / Entry Toggle */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-[var(--clinical-light)] text-[var(--clinical)] border border-[var(--clinical-mid)]">
+                {activeTab === "doctor" ? <Stethoscope className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+              </div>
+              <span className="text-[11px] font-mono uppercase px-2.5 py-1 rounded bg-[var(--ink-100)] text-[var(--ink-700)] border border-[var(--ink-200)] font-semibold">
+                {activeTab === "doctor" ? "Physician Workstation" : "Patient Portal"}
+              </span>
             </div>
-            <h2 className="text-xl font-bold text-[var(--ink-900)]">Sign in to CareFlow AI</h2>
-            <p className="text-xs text-[var(--ink-500)]">
-              Access your clinical records or hospital workstation
-            </p>
+
+            {/* Section 6: Patient / Doctor Entry Toggle */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--ink-100)] rounded-lg border border-[var(--ink-200)]">
+              <button
+                type="button"
+                onClick={() => handleTabChange("patient")}
+                className={`animate-login-left flex flex-col items-start p-2.5 rounded-md transition-all text-left cursor-pointer ${
+                  activeTab === "patient"
+                    ? "bg-[var(--bg-surface)] text-[var(--ink-900)] shadow-[var(--shadow-sm)] border border-[var(--ink-200)] font-semibold"
+                    : "text-[var(--ink-500)] hover:text-[var(--ink-800)] hover:bg-[var(--bg-surface)]/60"
+                }`}
+                aria-pressed={activeTab === "patient"}
+              >
+                <div className="flex items-center gap-1.5 text-xs">
+                  <User className="w-3.5 h-3.5 text-[var(--clinical)]" />
+                  <span>Patient</span>
+                </div>
+                <span className="text-[10px] text-[var(--ink-500)] mt-0.5 leading-tight">
+                  Patient Portal · Intake &amp; records
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange("doctor")}
+                className={`animate-login-right flex flex-col items-start p-2.5 rounded-md transition-all text-left cursor-pointer ${
+                  activeTab === "doctor"
+                    ? "bg-[var(--bg-surface)] text-[var(--ink-900)] shadow-[var(--shadow-sm)] border border-[var(--ink-200)] font-semibold"
+                    : "text-[var(--ink-500)] hover:text-[var(--ink-800)] hover:bg-[var(--bg-surface)]/60"
+                }`}
+                aria-pressed={activeTab === "doctor"}
+              >
+                <div className="flex items-center gap-1.5 text-xs">
+                  <UserCheck className="w-3.5 h-3.5 text-[var(--clinical)]" />
+                  <span>Doctor</span>
+                </div>
+                <span className="text-[10px] text-[var(--ink-500)] mt-0.5 leading-tight">
+                  Doctor Panel · Clinical staff
+                </span>
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <h2 className="text-xl font-bold text-[var(--ink-900)]">
+                {activeTab === "doctor" ? "Doctor Workstation Sign In" : "Sign in to CareFlow AI"}
+              </h2>
+              <p className="text-xs text-[var(--ink-500)]">
+                {activeTab === "doctor"
+                  ? "Access the physician clinical command center and intake queue"
+                  : "Access your clinical records, voice intake, and health timeline"}
+              </p>
+            </div>
           </div>
 
           {/* Error Banner */}
@@ -258,29 +369,36 @@ function LoginFormContent() {
           )}
 
           {/* Google Sign-In */}
-          <button
-            type="button"
-            onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-xs font-semibold text-[var(--ink-800)] hover:bg-[var(--ink-100)] transition-colors cursor-pointer shadow-[var(--shadow-xs)]"
-          >
-            <GoogleIcon />
-            <span>Continue with Google</span>
-          </button>
+          <div className="animate-login-item-1">
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-xs font-semibold text-[var(--ink-800)] hover:bg-[var(--ink-100)] transition-colors cursor-pointer shadow-[var(--shadow-xs)] disabled:opacity-60"
+            >
+              <GoogleIcon />
+              <span>
+                {activeTab === "doctor"
+                  ? "Continue with Hospital Google Workspace"
+                  : "Continue with Google"}
+              </span>
+            </button>
+          </div>
 
           {/* Divider */}
           <div className="relative flex items-center py-1">
             <div className="flex-grow border-t border-[var(--ink-200)]"></div>
             <span className="flex-shrink mx-3 text-[11px] text-[var(--ink-400)] uppercase tracking-wider font-semibold">
-              or password
+              {activeTab === "doctor" ? "or hospital credentials" : "or password"}
             </span>
             <div className="flex-grow border-t border-[var(--ink-200)]"></div>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-[var(--ink-800)] mb-1.5">
-                Email Address
+            <div className="animate-login-item-2 space-y-1.5">
+              <label htmlFor="email" className="block text-xs font-semibold text-[var(--ink-800)]">
+                {activeTab === "doctor" ? "Hospital Physician Email" : "Email Address"}
               </label>
               <input
                 id="email"
@@ -289,13 +407,13 @@ function LoginFormContent() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="doctor@hospital.org or patient@email.com"
+                placeholder={activeTab === "doctor" ? "doctor@hospital.org" : "patient@email.com"}
                 className="w-full text-xs p-3 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] placeholder:text-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors"
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-xs font-semibold text-[var(--ink-800)] mb-1.5">
+            <div className="animate-login-item-3 space-y-1.5">
+              <label htmlFor="password" className="block text-xs font-semibold text-[var(--ink-800)]">
                 Password
               </label>
               <div className="relative">
@@ -321,34 +439,88 @@ function LoginFormContent() {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              isLoading={isLoading}
-              className="w-full mt-2 cursor-pointer"
-            >
-              <span>Sign In</span>
-              {!isLoading && <ArrowRight className="w-3.5 h-3.5" />}
-            </Button>
+            {/* Doctor Section: Hospital Code Field */}
+            {activeTab === "doctor" && (
+              <div className="animate-login-item-4 space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="hospital-code" className="block text-xs font-semibold text-[var(--ink-800)]">
+                    Hospital / Department Code
+                  </label>
+                  <span className="text-[10px] text-[var(--ink-500)] flex items-center gap-1">
+                    <Building2 className="w-3 h-3 text-[var(--clinical)]" />
+                    Required
+                  </span>
+                </div>
+                <input
+                  id="hospital-code"
+                  type="text"
+                  required
+                  value={hospitalCode}
+                  onChange={(e) => setHospitalCode(e.target.value.toUpperCase())}
+                  placeholder="HOSP-XXXX"
+                  className="w-full text-xs p-3 rounded-md border border-[var(--ink-200)] bg-[var(--bg-surface)] text-[var(--ink-900)] placeholder:text-[var(--ink-400)] focus:outline-none focus:border-[var(--clinical)] focus:ring-1 focus:ring-[var(--clinical)] transition-colors font-mono"
+                />
+                <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-[var(--ink-500)]">
+                  <span>Provided by your hospital administrator.</span>
+                  <button
+                    type="button"
+                    onClick={() => setHospitalCode("HOSP-AIIMS-CARDIO")}
+                    className="font-mono text-[var(--clinical)] hover:underline cursor-pointer bg-[var(--ink-100)] border border-[var(--ink-200)] px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                    title="Click to fill AIIMS Cardiology hospital code"
+                  >
+                    Fill HOSP-AIIMS-CARDIO
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="animate-login-item-5 pt-1">
+              <Button
+                type="submit"
+                size="lg"
+                isLoading={isLoading}
+                className="w-full cursor-pointer"
+              >
+                <span>{activeTab === "doctor" ? "Sign In to Workstation" : "Sign In to Patient Portal"}</span>
+                {!isLoading && <ArrowRight className="w-3.5 h-3.5" />}
+              </Button>
+            </div>
           </form>
 
-          {/* Registration & Doctor Workstation Links */}
+          {/* Context Switching helper */}
           <div className="pt-2 text-center border-t border-[var(--ink-200)] space-y-2">
-            <p className="text-xs text-[var(--ink-500)]">
-              Hospital doctor or staff member?{" "}
-              <Link
-                href="/staff-login"
-                className="font-semibold text-[var(--clinical)] hover:text-[var(--clinical-dark)] hover:underline inline-flex items-center gap-1"
-              >
-                <span>Doctor Workstation Sign In</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </p>
+            {activeTab === "doctor" ? (
+              <p className="text-xs text-[var(--ink-500)]">
+                Are you a patient?{" "}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange("patient")}
+                  className="font-semibold text-[var(--clinical)] hover:underline cursor-pointer inline-flex items-center gap-1"
+                >
+                  <span>Switch to Patient Portal</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </p>
+            ) : (
+              <p className="text-xs text-[var(--ink-500)]">
+                Hospital doctor or clinical staff?{" "}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange("doctor")}
+                  className="font-semibold text-[var(--clinical)] hover:underline cursor-pointer inline-flex items-center gap-1"
+                >
+                  <span>Switch to Doctor Workstation</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </p>
+            )}
           </div>
 
           {/* Footer notice */}
           <p className="text-[11px] text-center text-[var(--ink-400)] leading-normal">
-            Authorized hospital personnel and registered patients only. All actions are audited.
+            {activeTab === "doctor"
+              ? "Authorized hospital personnel and verified clinical staff only. All clinical actions are audited."
+              : "Authorized patients and registered guardians only. All account accesses are securely logged."}
           </p>
         </div>
       </div>
@@ -372,4 +544,5 @@ export default function LoginPage() {
     </Suspense>
   );
 }
+
 

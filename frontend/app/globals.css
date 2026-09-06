@@ -147,3 +147,103 @@ code, kbd, pre, .font-mono {
   background: var(--entity-rejected-bg);
   color: var(--entity-rejected-fg);
 }
+
+/* ─── Section 6: Coordinated Login Entrance Animation ─────────────────────── */
+@keyframes loginFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes loginSettleLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes loginSettleRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes loginRisePanel {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loginFadeUpItem {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-login-left {
+  animation: loginSettleLeft 500ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+}
+
+.animate-login-right {
+  animation: loginSettleRight 500ms cubic-bezier(0.16, 1, 0.3, 1) 250ms both;
+}
+
+.animate-login-panel {
+  animation: loginRisePanel 650ms cubic-bezier(0.16, 1, 0.3, 1) 350ms both;
+}
+
+.animate-login-item-1 {
+  animation: loginFadeUpItem 450ms cubic-bezier(0.16, 1, 0.3, 1) 450ms both;
+}
+
+.animate-login-item-2 {
+  animation: loginFadeUpItem 450ms cubic-bezier(0.16, 1, 0.3, 1) 550ms both;
+}
+
+.animate-login-item-3 {
+  animation: loginFadeUpItem 450ms cubic-bezier(0.16, 1, 0.3, 1) 650ms both;
+}
+
+.animate-login-item-4 {
+  animation: loginFadeUpItem 450ms cubic-bezier(0.16, 1, 0.3, 1) 750ms both;
+}
+
+.animate-login-item-5 {
+  animation: loginFadeUpItem 450ms cubic-bezier(0.16, 1, 0.3, 1) 850ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-login-left,
+  .animate-login-right,
+  .animate-login-panel,
+  .animate-login-item-1,
+  .animate-login-item-2,
+  .animate-login-item-3,
+  .animate-login-item-4,
+  .animate-login-item-5 {
+    animation: loginFadeIn 200ms ease-out both !important;
+    transform: none !important;
+  }
+}
