@@ -2,21 +2,33 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, UserCircle, LogOut, Menu, X } from "lucide-react";
+import {
+  LayoutDashboard, Users, UserCircle, LogOut, Menu, X, Stethoscope,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { getQueue } from "@/services/doctor.service";
 
-const navItems = [
-  { href: "/doctor/dashboard", label: "Patient Queue", icon: LayoutDashboard },
-  { href: "/doctor/patients",  label: "Patients",       icon: Users },
-  { href: "/doctor/profile",   label: "Profile",        icon: UserCircle },
+const navGroups = [
+  {
+    label: "Workspace",
+    items: [
+      { href: "/doctor/dashboard", label: "Command Center", icon: LayoutDashboard },
+      { href: "/doctor/patients",  label: "Clinical Queue",  icon: Users },
+    ],
+  },
+  {
+    label: "Account",
+    items: [
+      { href: "/doctor/profile", label: "Profile", icon: UserCircle },
+    ],
+  },
 ];
 
 export default function DoctorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const router   = useRouter();
   const { user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -33,45 +45,57 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
   function handleLogout() { logout(); router.push("/login"); }
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
-  const renderNavLinks = (
-    <div className="space-y-4">
-      <div>
-        <p className="px-2.5 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--sidebar-muted)] select-none">
-          Command Rail
-        </p>
-        <div className="space-y-0.5">
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const active = isActive(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-2.5 px-2.5 py-2 rounded-md text-xs font-medium transition-colors",
-                  active
-                    ? "bg-[var(--sidebar-active)] text-white font-semibold border-l-2 border-[#0F8FA8] pl-2"
-                    : "text-[var(--sidebar-muted)] hover:bg-[var(--sidebar-hover)] hover:text-white"
-                )}
-              >
-                <Icon className={cn("w-4 h-4 flex-shrink-0", active ? "text-[#63E6BE]" : "text-[var(--sidebar-muted)]")} />
-                <span className="flex-1">{label}</span>
-                {href === "/doctor/dashboard" && pendingCount > 0 && (
-                  <span className="bg-[#B7791F] text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-[18px] text-center">
-                    {pendingCount}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+  const SidebarNav = ({ onClose }: { onClose?: () => void }) => (
+    <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto" aria-label="Doctor navigation">
+      {navGroups.map(group => (
+        <div key={group.label}>
+          <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--sidebar-muted)" }}>
+            {group.label}
+          </p>
+          <div className="space-y-0.5">
+            {group.items.map(({ href, label, icon: Icon }) => {
+              const active = isActive(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onClose}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
+                    active
+                      ? "text-white"
+                      : "hover:text-white"
+                  )}
+                  style={{
+                    background: active ? "var(--sidebar-active)" : undefined,
+                    color: active ? "var(--sidebar-fg)" : "rgba(255,255,255,0.75)",
+                  }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "var(--sidebar-hover)"; }}
+                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = ""; }}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r" style={{ background: "#0F8FA8" }} aria-hidden="true" />
+                  )}
+                  <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                  <span className="flex-1">{label}</span>
+                  {href === "/doctor/dashboard" && pendingCount > 0 && (
+                    <span className="bg-amber-400 text-amber-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none" aria-label={`${pendingCount} pending`}>
+                      {pendingCount}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ))}
 
-      {/* Contextual Current Case Sub-Navigation (Section 8.1) */}
+      {/* Contextual Current Case Sub-Navigation */}
       {isCaseOpen && currentCaseId && (
-        <div className="pt-2 border-t border-[var(--sidebar-border)]">
-          <div className="flex items-center justify-between px-2.5 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#A5D8F3]">
+        <div className="pt-3 border-t border-[var(--sidebar-border)]">
+          <div className="flex items-center justify-between px-3 mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#A5D8F3]">
               Active Case
             </span>
             <span className="text-[9px] font-mono text-[var(--sidebar-muted)]">
@@ -81,21 +105,24 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
           <div className="space-y-0.5 text-xs text-[var(--sidebar-muted)]">
             <Link
               href={`/doctor/patients/${currentCaseId}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-[var(--sidebar-hover)] hover:text-white transition-colors"
+              onClick={onClose}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--sidebar-hover)] hover:text-white transition-colors"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#63E6BE]" />
               <span>Consolidated Report</span>
             </Link>
             <Link
               href={`/doctor/patients/${currentCaseId}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-[var(--sidebar-hover)] hover:text-white transition-colors"
+              onClick={onClose}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--sidebar-hover)] hover:text-white transition-colors"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#5CC8D7]" />
               <span>Clinical Findings</span>
             </Link>
             <Link
               href={`/doctor/patients/${currentCaseId}`}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-[var(--sidebar-hover)] hover:text-white transition-colors"
+              onClick={onClose}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-[var(--sidebar-hover)] hover:text-white transition-colors"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#0F8FA8]" />
               <span>Document Evidence</span>
@@ -103,78 +130,116 @@ export default function DoctorLayout({ children }: { children: React.ReactNode }
           </div>
         </div>
       )}
+    </nav>
+  );
+
+  const renderSidebarShell = (onClose?: () => void) => (
+    <div className="flex flex-col h-full" style={{ background: "var(--sidebar-bg)" }}>
+      {/* Wordmark */}
+      <div className="px-5 py-4 flex items-center gap-2.5" style={{ borderBottom: "1px solid var(--sidebar-border)" }}>
+        <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "#0F8FA8" }}>
+          <Stethoscope className="w-4 h-4 text-white" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-white font-bold text-sm tracking-tight leading-tight">CareFlow AI</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider leading-tight" style={{ color: "var(--sidebar-muted)" }}>
+            Clinical Workstation
+          </p>
+        </div>
+      </div>
+
+      <SidebarNav onClose={onClose} />
+
+      {/* Identity + sign out */}
+      <div className="px-3 py-4" style={{ borderTop: "1px solid var(--sidebar-border)" }}>
+        <div className="px-3 py-2 mb-1 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold truncate" style={{ color: "var(--sidebar-fg)" }}>{user?.full_name ?? "Doctor"}</p>
+            <p className="text-[10px] truncate" style={{ color: "var(--sidebar-muted)" }}>{user?.hospital_affiliation ?? user?.email}</p>
+          </div>
+          {pendingCount > 0 && (
+            <span className="bg-amber-400 text-amber-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" aria-label={`${pendingCount} pending`}>
+              {pendingCount}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer"
+          style={{ color: "rgba(255,255,255,0.65)" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.2)"; (e.currentTarget as HTMLElement).style.color = "#fca5a5"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ""; (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.65)"; }}
+        >
+          <LogOut className="w-4 h-4" aria-hidden="true" />
+          Sign out
+        </button>
+      </div>
     </div>
   );
 
   return (
     <div className="flex min-h-screen bg-[var(--bg-canvas)] text-[var(--ink-800)]">
-      {/* Desktop sidebar — Dark Institutional Clinical Teal */}
-      <aside className="hidden md:flex flex-col w-60 bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)] fixed inset-y-0 z-30 shadow-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--sidebar-border)]">
-          <div className="flex items-center gap-2">
-            <span className="text-white font-bold text-base tracking-tight">CareFlow AI</span>
-            <span className="text-[10px] font-semibold text-[#A5D8F3] bg-[rgba(255,255,255,0.12)] px-1.5 py-0.5 rounded">
-              Clinician
-            </span>
-          </div>
-        </div>
-        <nav className="flex-1 px-3 py-3 overflow-y-auto">{renderNavLinks}</nav>
-        <div className="px-3 py-3 border-t border-[var(--sidebar-border)] bg-[rgba(0,0,0,0.12)]">
-          <div className="px-2 py-1 mb-1">
-            <p className="text-xs font-semibold text-white truncate">{user?.full_name ?? user?.email ?? "Physician"}</p>
-            <p className="text-[10px] text-[var(--sidebar-muted)] truncate">{user?.hospital_affiliation ?? user?.email}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-[var(--sidebar-muted)] hover:text-white hover:bg-[rgba(197,48,48,0.3)] transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign out</span>
-          </button>
-        </div>
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex flex-col w-60 fixed inset-y-0 z-30" aria-label="Doctor workstation navigation">
+        {renderSidebarShell()}
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-[var(--sidebar-bg)] border-b border-[var(--sidebar-border)] flex items-center justify-between px-4 py-3 text-white">
+      <div
+        className="md:hidden fixed top-0 inset-x-0 z-40 flex items-center justify-between px-4 py-3"
+        style={{ background: "var(--sidebar-bg)", borderBottom: "1px solid var(--sidebar-border)" }}
+      >
         <div className="flex items-center gap-2">
-          <span className="font-bold text-base tracking-tight text-white">CareFlow AI</span>
-          <span className="text-[10px] font-semibold text-[#A5D8F3] bg-[rgba(255,255,255,0.12)] px-1.5 py-0.5 rounded">
-            Clinician
-          </span>
+          <Stethoscope className="w-4 h-4" style={{ color: "#0F8FA8" }} aria-hidden="true" />
+          <span className="text-white font-bold text-sm">CareFlow AI</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--sidebar-muted)" }}>Clinical</span>
         </div>
-        <button onClick={() => setMobileOpen(v => !v)} className="p-1 rounded-md text-[var(--sidebar-muted)] hover:text-white cursor-pointer">
+        <button
+          onClick={() => setMobileOpen(v => !v)}
+          className="p-2 rounded-md transition-colors cursor-pointer"
+          style={{ color: "rgba(255,255,255,0.7)" }}
+          aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={mobileOpen}
+        >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer overlay */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setMobileOpen(false)}>
-          <aside className="absolute left-0 top-0 h-full w-64 bg-[var(--sidebar-bg)] shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-[var(--sidebar-border)]">
-              <span className="text-white font-bold text-base">CareFlow AI</span>
-              <span className="text-[10px] font-semibold text-[#A5D8F3] bg-[rgba(255,255,255,0.12)] px-1.5 py-0.5 rounded">
-                Clinician
-              </span>
-            </div>
-            <nav className="flex-1 px-3 py-3 overflow-y-auto">{renderNavLinks}</nav>
-            <div className="px-3 py-3 border-t border-[var(--sidebar-border)] bg-[rgba(0,0,0,0.12)]">
-              <div className="px-2 py-1 mb-1">
-                <p className="text-xs font-semibold text-white truncate">{user?.full_name ?? user?.email}</p>
-                <p className="text-[10px] text-[var(--sidebar-muted)] truncate">{user?.email}</p>
-              </div>
-              <button onClick={handleLogout} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-[var(--sidebar-muted)] hover:text-white hover:bg-[rgba(197,48,48,0.3)] transition-colors cursor-pointer">
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign out</span>
-              </button>
-            </div>
+        <div className="md:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setMobileOpen(false)} aria-hidden="true">
+          <aside className="absolute left-0 top-0 h-full w-64 shadow-2xl" onClick={e => e.stopPropagation()} aria-label="Mobile navigation">
+            {renderSidebarShell(() => setMobileOpen(false))}
           </aside>
         </div>
       )}
 
+      {/* Mobile bottom nav */}
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-20 flex safe-area-bottom"
+        style={{ background: "var(--sidebar-bg)", borderTop: "1px solid var(--sidebar-border)" }}
+        aria-label="Mobile bottom navigation"
+      >
+        {navGroups.flatMap(g => g.items).map(({ href, label, icon: Icon }) => {
+          const active = isActive(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors"
+              style={{ color: active ? "#0F8FA8" : "var(--sidebar-muted)" }}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon className="w-5 h-5" aria-hidden="true" />
+              <span className="text-[10px]">{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
       {/* Main content */}
-      <main className="flex-1 md:ml-60 pt-14 md:pt-0 min-w-0">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">{children}</div>
+      <main className="flex-1 md:ml-60 pt-14 md:pt-0 pb-20 md:pb-0 min-w-0">
+        <div className="px-5 md:px-8 py-5 md:py-6">{children}</div>
       </main>
     </div>
   );

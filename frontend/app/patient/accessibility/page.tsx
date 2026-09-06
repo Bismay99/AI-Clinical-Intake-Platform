@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useState, useCallback } from "react";
 import {
   Accessibility,
@@ -43,21 +43,20 @@ function applyPrefs(prefs: Prefs) {
 }
 
 export default function AccessibilityPage() {
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
-  const [saved, setSaved] = useState(false);
-
-  // Load prefs from localStorage on mount
-  useEffect(() => {
+  const [prefs, setPrefs] = useState<Prefs>(() => {
+    if (typeof window === "undefined") return DEFAULT_PREFS;
     try {
       const raw = localStorage.getItem(PREFS_KEY);
-      if (raw) {
-        const stored: Prefs = { ...DEFAULT_PREFS, ...JSON.parse(raw) };
-        setPrefs(stored);
-        applyPrefs(stored);
-      }
+      return raw ? { ...DEFAULT_PREFS, ...JSON.parse(raw) } : DEFAULT_PREFS;
     } catch {
-      // ignore parse errors
+      return DEFAULT_PREFS;
     }
+  });
+  const [saved, setSaved] = useState(false);
+
+  // Apply prefs on mount
+  useEffect(() => {
+    applyPrefs(prefs);
   }, []);
 
   const toggle = useCallback((key: keyof Prefs) => {

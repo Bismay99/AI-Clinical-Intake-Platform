@@ -157,7 +157,7 @@ export default function PatientDashboard() {
   });
 
   documents.forEach((doc) => {
-    const d = new Date(doc.upload_timestamp || Date.now());
+    const d = new Date(doc.upload_timestamp || 0);
     activityList.push({
       id: `doc-${doc.id}`,
       rawDate: d.getTime(),
@@ -758,6 +758,38 @@ export default function PatientDashboard() {
             </div>
           </section>
 
+          {/* Quick Access Navigation Strip — compact list (not card grid) */}
+          <section className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[var(--ink-200)]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-500)]">
+                Quick Access
+              </span>
+            </div>
+            <div className="divide-y divide-[var(--ink-200)]">
+              {[
+                { href: "/patient/intake",    icon: Activity,      label: "CareVoice Intake",       sub: "Start or resume consultation" },
+                { href: "/patient/documents", icon: FolderOpen,    label: "Documents",               sub: `${documents.length} uploaded` },
+                { href: "/patient/reports",   icon: ClipboardList, label: "Pre-Consultation Reports", sub: `${reports.length} report${reports.length !== 1 ? "s" : ""}` },
+                { href: "/patient/profile",   icon: User,          label: "Profile",                 sub: "Account & clinical history" },
+              ].map(({ href, icon: Icon, label, sub }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-[var(--bg-surface-2)] transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon className="w-3.5 h-3.5 text-[var(--clinical)] flex-shrink-0" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-[var(--ink-900)]">{label}</p>
+                      <p className="text-[10px] text-[var(--ink-500)]">{sub}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-[var(--ink-400)] group-hover:text-[var(--clinical)] transition-colors flex-shrink-0" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </section>
+
           {/* ── AI EXTRACTION & PHYSICIAN GOVERNANCE — concise clinical notice ── */}
           <section className="border border-[var(--clinical-mid)] rounded-lg overflow-hidden shadow-xs">
             <div className="bg-[var(--clinical-light)] px-4 py-2.5 flex items-center gap-2 border-b border-[var(--clinical-mid)]">
@@ -796,6 +828,7 @@ export default function PatientDashboard() {
               })()}
             </div>
           </section>
+
         </div>
       </div>
     </div>

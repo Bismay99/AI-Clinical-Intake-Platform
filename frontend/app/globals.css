@@ -102,10 +102,17 @@
   --secondary:   var(--clinical-accent);
   --text:        var(--ink-900);
   --text-muted:  var(--ink-500);
-  --border:      var(--ink-200);
   --success:     var(--status-success-fg);
   --warning:     var(--status-pending-fg);
   --error:       var(--status-error-fg);
+
+  /* ── Sidebar — dark clinical institutional theme ──────────────────────── */
+  --sidebar-bg:      #064B63;   /* dark clinical teal */
+  --sidebar-hover:   rgba(255,255,255,0.08);
+  --sidebar-active:  rgba(15,143,168,0.28);
+  --sidebar-border:  rgba(255,255,255,0.12);
+  --sidebar-fg:      #FFFFFF;
+  --sidebar-muted:   #9FB3C8;
 }
 
 /* ─── Base ──────────────────────────────────────────────────────────────── */
@@ -286,6 +293,40 @@ code, kbd, pre, .font-mono {
   animation: loginFadeUpItem 450ms cubic-bezier(0.16, 1, 0.3, 1) 800ms both;
 }
 
+/* ─── Alternative Settle / Entrance Animations & Delays ───────────────────── */
+@keyframes settle-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes settle-left {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes settle-right {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-settle-up    { animation: settle-up    0.55s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-settle-left  { animation: settle-left  0.55s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-settle-right { animation: settle-right 0.55s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-fade-in      { animation: fade-in      0.45s ease both; }
+
+/* Delay utilities */
+.anim-d-0   { animation-delay: 0ms; }
+.anim-d-80  { animation-delay: 80ms; }
+.anim-d-150 { animation-delay: 150ms; }
+.anim-d-220 { animation-delay: 220ms; }
+.anim-d-300 { animation-delay: 300ms; }
+.anim-d-380 { animation-delay: 380ms; }
+.anim-d-450 { animation-delay: 450ms; }
+.anim-d-530 { animation-delay: 530ms; }
+.anim-d-600 { animation-delay: 600ms; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-login-bg,
   .animate-login-headline,
@@ -297,7 +338,10 @@ code, kbd, pre, .font-mono {
   .animate-login-item-2,
   .animate-login-item-3,
   .animate-login-item-4,
-  .animate-login-item-5 {
+  .animate-login-item-5,
+  .animate-settle-up,
+  .animate-settle-left,
+  .animate-settle-right {
     animation: loginFadeIn 200ms ease-out both !important;
     transform: none !important;
   }
@@ -345,14 +389,6 @@ code, kbd, pre, .font-mono {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }
 
 /* ── Larger Touch Targets ────────────────────────────────────────────────── */

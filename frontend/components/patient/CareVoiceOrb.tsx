@@ -50,12 +50,12 @@ export function CareVoiceOrb({
   // Setup Web Audio API AnalyserNode when mediaStream is active
   useEffect(() => {
     if (!mediaStream || state !== "listening") {
-      setAmplitude(0);
+      const raf = requestAnimationFrame(() => setAmplitude(0));
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;
       }
-      return;
+      return () => cancelAnimationFrame(raf);
     }
 
     try {
@@ -96,7 +96,7 @@ export function CareVoiceOrb({
       animFrameRef.current = requestAnimationFrame(updateAmplitude);
     } catch (err) {
       console.debug("[CareVoiceOrb] Web Audio API analysis unavailable, using fallback pulse:", err);
-      setAmplitude(0);
+      requestAnimationFrame(() => setAmplitude(0));
     }
 
     return () => {
