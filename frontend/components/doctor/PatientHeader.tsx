@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 import Link from "next/link";
-import { ArrowLeft, User2, Building2 } from "lucide-react";
+import { ArrowLeft, User, Building2, Hash } from "lucide-react";
 import { StatusBadge } from "@/components/doctor/StatusBadge";
 
 interface PatientHeaderProps {
@@ -10,39 +10,86 @@ interface PatientHeaderProps {
   department?: string | null;
   status: string;
   backHref?: string;
+  /** Slot for a primary action (e.g. Finalize button) rendered at the far right */
+  action?: React.ReactNode;
 }
 
-export function PatientHeader({ patientName, patientId, encounterId, department, status, backHref = "/doctor/patients" }: PatientHeaderProps) {
+export function PatientHeader({
+  patientName,
+  patientId,
+  encounterId,
+  department,
+  status,
+  backHref = "/doctor/patients",
+  action,
+}: PatientHeaderProps) {
   return (
-    <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 mb-6 shadow-xs">
-      <div className="flex items-center gap-1.5 text-xs text-[#667085] mb-3 font-medium">
-        <Link href={backHref} className="hover:text-[#155EEF] transition-colors flex items-center gap-1">
+    <div className="mb-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1 mb-3">
+        <Link
+          href={backHref}
+          className="inline-flex items-center gap-1 text-xs text-[var(--ink-500)] hover:text-[var(--clinical)] transition-colors"
+        >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Patients
         </Link>
       </div>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <User2 className="w-5 h-5 text-[#155EEF]" />
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-[#172033]">{patientName}</h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-              <span className="text-xs text-[#667085]">Patient UID: <span className="font-mono text-[#172033] font-medium">{patientId}</span></span>
-              {department && (
-                <span className="text-xs text-[#667085] flex items-center gap-1">
-                  <Building2 className="w-3 h-3" />{department}
+
+      {/* Banner */}
+      <div className="bg-[var(--bg-surface)] border border-[var(--ink-200)] rounded-lg shadow-[var(--shadow-sm)] overflow-hidden">
+        {/* Clinical accent bar */}
+        <div className="h-1 bg-[var(--clinical)]" />
+
+        <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Left: patient identity */}
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Avatar */}
+            <div className="w-10 h-10 rounded-lg bg-[var(--clinical-light)] flex items-center justify-center flex-shrink-0 border border-[var(--clinical-mid)]">
+              <User className="w-5 h-5 text-[var(--clinical)]" />
+            </div>
+
+            {/* Identity block */}
+            <div className="min-w-0">
+              <h1 className="text-base font-bold text-[var(--ink-900)] leading-tight truncate">
+                {patientName}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
+                {/* Patient UID */}
+                <span className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-500)]">
+                  <User className="w-3 h-3" aria-hidden="true" />
+                  <span className="font-mono text-[var(--ink-700)]" title="Patient UID">
+                    {patientId.slice(0, 8)}…
+                  </span>
                 </span>
-              )}
+
+                {/* Encounter token */}
+                <span className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-500)]">
+                  <Hash className="w-3 h-3" aria-hidden="true" />
+                  <span className="font-mono text-[var(--ink-700)]" title="Encounter ID">
+                    {encounterId.slice(0, 8)}…
+                  </span>
+                </span>
+
+                {/* Department */}
+                {department && (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-[var(--ink-500)]">
+                    <Building2 className="w-3 h-3" aria-hidden="true" />
+                    {department}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <StatusBadge status={status} />
-          <span className="text-xs text-[#667085] font-mono">#{encounterId.slice(0, 8)}</span>
+
+          {/* Right: status + action */}
+          <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
+            <StatusBadge status={status} />
+            {action}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

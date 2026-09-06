@@ -1,31 +1,41 @@
-﻿import { cn } from "@/lib/utils";
+/**
+ * StatusBadge — unified router for all encounter + entity status badges.
+ *
+ * Existing callsites pass any status string and get the correct badge.
+ * Internally delegates to EncounterBadge or EntityBadge from Badge.tsx.
+ */
+import { EncounterBadge, EntityBadge } from "@/components/ui/Badge";
 
-type Status =
-  | "registered" | "intake_in_progress" | "submitted" | "ready_for_review" | "completed"
-  | "unreviewed" | "accepted" | "edited" | "rejected";
+const ENCOUNTER_STATUSES = new Set([
+  "registered",
+  "intake_in_progress",
+  "submitted",
+  "ready_for_review",
+  "completed",
+]);
 
-const MAP: Record<Status, { label: string; cls: string }> = {
-  registered:         { label: "Registered",     cls: "bg-gray-100 text-gray-600 border-gray-200" },
-  intake_in_progress: { label: "In Progress",    cls: "bg-blue-50 text-[#155EEF] border-blue-200" },
-  submitted:          { label: "Submitted",       cls: "bg-purple-50 text-purple-700 border-purple-200" },
-  ready_for_review:   { label: "Awaiting Review", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-  completed:          { label: "Completed",       cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  unreviewed:         { label: "Unreviewed",      cls: "bg-gray-100 text-gray-500 border-gray-200" },
-  accepted:           { label: "Accepted",        cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  edited:             { label: "Edited",          cls: "bg-blue-50 text-[#155EEF] border-blue-200" },
-  rejected:           { label: "Rejected",        cls: "bg-red-50 text-red-700 border-red-200" },
-};
+const ENTITY_STATUSES = new Set(["unreviewed", "accepted", "edited", "rejected"]);
 
-interface StatusBadgeProps { status: string; className?: string; }
+interface StatusBadgeProps {
+  status: string;
+  className?: string;
+  showIcon?: boolean;
+}
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const cfg = MAP[status as Status] ?? { label: status, cls: "bg-gray-100 text-gray-500 border-gray-200" };
+export function StatusBadge({ status, className, showIcon = true }: StatusBadgeProps) {
+  if (ENCOUNTER_STATUSES.has(status)) {
+    return <EncounterBadge status={status} className={className} showIcon={showIcon} />;
+  }
+  if (ENTITY_STATUSES.has(status)) {
+    return <EntityBadge status={status} className={className} showIcon={showIcon} />;
+  }
+  // Fallback: render as neutral badge
   return (
-    <span className={cn(
-      "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide border",
-      cfg.cls, className
-    )}>
-      {cfg.label}
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide border bg-[var(--status-neutral-bg)] text-[var(--status-neutral-fg)] border-[var(--status-neutral-bd)] ${className ?? ""}`}
+    >
+      {status}
     </span>
   );
 }
+

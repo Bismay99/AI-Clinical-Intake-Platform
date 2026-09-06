@@ -116,9 +116,39 @@ export default function EncounterReviewPage() {
   const docsList = summary.documents ?? [];
   const docsCount = summary.documents_count ?? docsList.length;
 
+  // Finalize action node — passed into PatientHeader as action prop
+  const finalizeAction = !finalizeSuccess ? (
+    finalizeConfirm ? (
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => finalizeMut.mutate()}
+          isLoading={finalizeMut.isPending}
+          className="bg-[var(--status-success-fg)] hover:bg-emerald-800 text-white"
+        >
+          Confirm Finalize
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => setFinalizeConfirm(false)}>
+          Cancel
+        </Button>
+      </div>
+    ) : (
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => setFinalizeConfirm(true)}
+        className="border-[var(--status-success-bd)] text-[var(--status-success-fg)] hover:bg-[var(--status-success-bg)]"
+      >
+        <FileCheck2 className="w-4 h-4" />
+        Finalize Encounter
+      </Button>
+    )
+  ) : null;
+
   return (
-    <div className="space-y-6 pb-16">
-      {/* Patient Header */}
+    <div className="space-y-5 pb-16">
+      {/* Patient Header with Finalize action slotted in */}
       <PatientHeader
         patientName={summary.patient_name || "Patient Record"}
         patientId={summary.patient_id || summary.encounter_id}
@@ -126,14 +156,15 @@ export default function EncounterReviewPage() {
         department={summary.opd_department || "General OPD"}
         status={finalizeSuccess ? "completed" : "ready_for_review"}
         backHref="/doctor/dashboard"
+        action={finalizeAction}
       />
 
       {/* Finalize Success Banner */}
       {finalizeSuccess && (
-        <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-sm text-emerald-800 flex items-center justify-between">
+        <div className="px-4 py-3 rounded-lg border border-[var(--status-success-bd)] bg-[var(--status-success-bg)] text-sm text-[var(--status-success-fg)] flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            <span className="font-semibold">Encounter finalized successfully. Status changed to Completed.</span>
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+            <span className="font-semibold">Encounter finalized. This record is now read-only.</span>
           </div>
           <Button size="sm" variant="secondary" onClick={() => router.push("/doctor/dashboard")}>
             Return to Queue
@@ -142,21 +173,23 @@ export default function EncounterReviewPage() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-[#E4E7EC] gap-6">
+      <div className="flex border-b border-[var(--ink-200)] gap-5">
         {[
-          { key: "overview",  label: "Consolidated Report",  icon: FileText },
-          { key: "history",   label: `Clinical History (${unreviewedCount > 0 ? `${unreviewedCount} unreviewed` : "Verified"})`, icon: History },
+          { key: "overview",  label: "Consolidated Report", icon: FileText },
+          { key: "history",   label: `Clinical Findings (${unreviewedCount > 0 ? `${unreviewedCount} unreviewed` : "All verified"})`, icon: History },
           { key: "documents", label: `Documents (${docsCount})`, icon: FileCheck },
-          { key: "timeline",  label: "Timeline",         icon: Clock },
+          { key: "timeline",  label: "Timeline", icon: Clock },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key as "overview" | "history" | "documents" | "timeline")}
-            className={`pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === key ? "border-[#155EEF] text-[#155EEF]" : "border-transparent text-[#667085] hover:text-[#172033]"
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+              activeTab === key
+                ? "border-[var(--clinical)] text-[var(--clinical)]"
+                : "border-transparent text-[var(--ink-500)] hover:text-[var(--ink-800)]"
             }`}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-3.5 h-3.5" />
             {label}
           </button>
         ))}
@@ -164,43 +197,44 @@ export default function EncounterReviewPage() {
 
       {/* TAB 1: Consolidated Overview */}
       {activeTab === "overview" && (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Pre-Consultation Status Banner */}
-          <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 flex items-center justify-between flex-wrap gap-3">
+          <div className="px-4 py-3 rounded-lg border border-[var(--clinical-mid)] bg-[var(--clinical-light)] flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2.5">
-              <ShieldCheck className="w-5 h-5 text-[#155EEF]" />
+              <ShieldCheck className="w-4 h-4 text-[var(--clinical)]" />
               <div>
-                <p className="text-sm font-bold text-[#172033]">Consolidated Clinical Report</p>
-                <p className="text-xs text-[#667085]">
+                <p className="text-sm font-semibold text-[var(--ink-900)]">Consolidated Clinical Report</p>
+                <p className="text-xs text-[var(--ink-500)]">
                   Aggregated from conversational intake turns and {docsCount} uploaded medical document{docsCount === 1 ? "" : "s"}.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-[#155EEF] border border-blue-200">
-                Documents reviewed: {docsCount}
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-[var(--status-info-bg)] text-[var(--status-info-fg)] border border-[var(--status-info-bd)]">
+                {docsCount} document{docsCount === 1 ? "" : "s"}
               </span>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                {unreviewedCount > 0 ? `${unreviewedCount} Awaiting Review` : "All Verified"}
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-md border ${unreviewedCount > 0 ? "bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border-[var(--status-pending-bd)]" : "bg-[var(--status-success-bg)] text-[var(--status-success-fg)] border-[var(--status-success-bd)]"}`}>
+                {unreviewedCount > 0 ? `${unreviewedCount} awaiting review` : "All entities verified"}
               </span>
             </div>
           </div>
 
           {/* AI Clinical Summary */}
-          <Card className="shadow-xs">
-            <CardHeader className="border-b border-[#E4E7EC] px-5 py-4">
-              <CardTitle className="text-sm font-bold text-[#172033]">Clinical Summary Narrative</CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle>Clinical Summary Narrative</CardTitle>
             </CardHeader>
-            <CardContent className="p-5">
-              <p className="text-sm text-[#172033] leading-relaxed whitespace-pre-line">
+            <CardContent>
+              <p className="text-sm text-[var(--ink-800)] leading-relaxed whitespace-pre-line">
                 {summary.summary_text}
               </p>
-              <div className="mt-4 pt-3 border-t border-[#E4E7EC] flex items-center justify-between text-xs text-[#667085]">
+              <div className="mt-4 pt-3 border-t border-[var(--ink-200)] flex items-center justify-between text-xs text-[var(--ink-500)]">
                 <span>Generated: {new Date(summary.generated_at).toLocaleString("en-IN")}</span>
-                <span>Entities Used: {summary.used_entity_fields?.length ?? 0}</span>
+                <span>Entities used: {summary.used_entity_fields?.length ?? 0}</span>
               </div>
             </CardContent>
           </Card>
+
 
           {/* Structured Clinical Sections */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -319,9 +353,9 @@ export default function EncounterReviewPage() {
         </div>
       )}
 
-      {/* TAB 2: Clinical History & Verification */}
+      {/* TAB 2: Clinical Findings & Verification */}
       {activeTab === "history" && (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {/* Status Filter Bar */}
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -329,120 +363,97 @@ export default function EncounterReviewPage() {
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                  className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
                     statusFilter === st
-                      ? "bg-[#155EEF] text-white"
-                      : "bg-white border border-[#E4E7EC] text-[#667085] hover:bg-gray-50"
+                      ? "bg-[var(--clinical)] text-white"
+                      : "bg-[var(--bg-surface)] border border-[var(--ink-200)] text-[var(--ink-500)] hover:bg-[var(--ink-100)]"
                   }`}
                 >
-                  {st}
+                  {st === "all" ? "All" : st === "unreviewed" ? "AI Extracted" : st === "accepted" ? "Verified" : st.charAt(0).toUpperCase() + st.slice(1)}
                 </button>
               ))}
             </div>
-            <span className="text-xs text-[#667085]">
-              Showing {filteredEntities.length} of {entities.length} clinical fields
+            <span className="text-xs text-[var(--ink-500)]">
+              {filteredEntities.length} of {entities.length} clinical fields
             </span>
           </div>
 
           {/* Entity Verification List */}
-          <div className="space-y-3">
-            {filteredEntities.map(entity => (
-              <EntityVerificationRow
-                key={entity.id}
-                entity={entity}
-                onVerify={handleVerify}
-                disabled={finalizeSuccess}
-              />
-            ))}
-          </div>
-
-          {/* Finalize Bar */}
-          {!finalizeSuccess && (
-            <div className="mt-8 pt-6 border-t border-[#E4E7EC] flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-5 rounded-xl border shadow-xs">
-              <div>
-                <h4 className="text-sm font-bold text-[#172033]">Complete Encounter Review</h4>
-                <p className="text-xs text-[#667085] mt-0.5">
-                  Finalizing creates an immutable audit trail and marks this encounter as Completed.
-                </p>
-              </div>
-              {finalizeConfirm ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={() => finalizeMut.mutate()}
-                    isLoading={finalizeMut.isPending}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold"
-                  >
-                    Confirm & Finalize
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setFinalizeConfirm(false)} className="text-xs">
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="md"
-                  onClick={() => setFinalizeConfirm(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold px-6"
-                >
-                  Finalize Encounter
-                </Button>
-              )}
+          {filteredEntities.length === 0 ? (
+            <div className="py-10 text-center text-sm text-[var(--ink-500)]">
+              No clinical fields match this filter.
             </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredEntities.map(entity => (
+                <EntityVerificationRow
+                  key={entity.id}
+                  entity={entity}
+                  onVerify={handleVerify}
+                  disabled={finalizeSuccess}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Read-only notice when finalized */}
+          {finalizeSuccess && (
+            <p className="text-xs text-[var(--ink-500)] text-center py-2">
+              This encounter is finalized. Clinical findings are read-only.
+            </p>
           )}
         </div>
       )}
 
       {/* TAB 3: Documents & Evidence */}
       {activeTab === "documents" && (
-        <Card className="shadow-xs">
-          <CardHeader className="border-b border-[#E4E7EC] px-5 py-4">
-            <CardTitle className="text-sm font-bold text-[#172033] flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <FileCheck className="w-4 h-4 text-[#155EEF]" />
-                <span>Uploaded Documents ({docsList.length})</span>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FileCheck className="w-4 h-4 text-[var(--clinical)]" />
+                Uploaded Documents ({docsList.length})
+              </CardTitle>
+              <span className="text-xs text-[var(--ink-500)]">
+                Expand any document to inspect extracted clinical entities
               </span>
-              <span className="text-xs text-[#667085] font-normal">
-                Click any document to inspect OCR text and extracted findings
-              </span>
-            </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className="p-5">
+          <CardContent>
             {docsList.length === 0 ? (
-              <div className="py-12 text-center text-sm text-[#667085]">
-                <FolderOpen className="w-8 h-8 mx-auto mb-2 text-[#D0D5DD]" />
+              <div className="py-12 text-center text-sm text-[var(--ink-500)]">
+                <FolderOpen className="w-8 h-8 mx-auto mb-2 text-[var(--ink-400)]" />
                 No medical documents uploaded for this encounter.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {docsList.map((doc: DocumentDetailResponse) => {
                   const isExp = !!expandedDocIds[doc.id];
                   const docEntities = doc.extracted_entities || [];
                   return (
                     <div
                       key={doc.id}
-                      className="border border-[#E4E7EC] rounded-xl overflow-hidden bg-white hover:border-gray-300 transition-colors"
+                      className="border border-[var(--ink-200)] rounded-lg overflow-hidden bg-[var(--bg-surface)] hover:border-[var(--ink-400)] transition-colors"
                     >
-                      {/* Document Card Header */}
-                      <div className="p-4 flex items-center justify-between gap-4 flex-wrap">
+                      {/* Document row */}
+                      <div className="px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#155EEF] flex items-center justify-center flex-shrink-0">
-                            <FileText className="w-5 h-5" />
+                          <div className="w-9 h-9 rounded-md bg-[var(--clinical-light)] text-[var(--clinical)] flex items-center justify-center flex-shrink-0 border border-[var(--clinical-mid)]">
+                            <FileText className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-[#172033] truncate">
+                            <p className="text-sm font-semibold text-[var(--ink-900)] truncate">
                               {doc.original_filename || "Document"}
                             </p>
-                            <div className="flex items-center gap-2 text-xs text-[#667085] mt-0.5 flex-wrap">
-                              <span className="capitalize font-semibold text-[#172033]">
+                            <div className="flex items-center gap-2 text-xs text-[var(--ink-500)] mt-0.5 flex-wrap">
+                              <span className="capitalize font-medium text-[var(--ink-700)]">
                                 {doc.document_type.replace(/_/g, " ")}
                               </span>
-                              <span>•</span>
-                              <span>Uploaded {new Date(doc.upload_timestamp).toLocaleString("en-IN")}</span>
+                              <span>·</span>
+                              <span>{new Date(doc.upload_timestamp).toLocaleString("en-IN")}</span>
                               {doc.file_size && (
                                 <>
-                                  <span>•</span>
+                                  <span>·</span>
                                   <span>{formatFileSize(doc.file_size)}</span>
                                 </>
                               )}
@@ -450,67 +461,75 @@ export default function EncounterReviewPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2.5 flex-shrink-0">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Processing status */}
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                            doc.processing_status === "processed"
+                              ? "bg-[var(--status-success-bg)] text-[var(--status-success-fg)] border-[var(--status-success-bd)]"
+                              : doc.processing_status === "failed"
+                              ? "bg-[var(--status-error-bg)] text-[var(--status-error-fg)] border-[var(--status-error-bd)]"
+                              : "bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border-[var(--status-pending-bd)]"
+                          }`}>
                             <FileCheck2 className="w-3 h-3" />
-                            <span className="capitalize">{doc.processing_status || "Processed"}</span>
+                            <span className="capitalize">{doc.processing_status || "processed"}</span>
                           </span>
 
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-[#155EEF] border border-blue-200">
-                            {docEntities.length} findings
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[var(--status-info-bg)] text-[var(--status-info-fg)] border border-[var(--status-info-bd)]">
+                            {docEntities.length} entities
                           </span>
 
                           <button
                             onClick={() => toggleDocExpand(doc.id)}
-                            className="p-1.5 rounded-lg border border-[#E4E7EC] hover:bg-gray-50 text-[#667085] transition-colors ml-1"
-                            title={isExp ? "Collapse details" : "Expand details"}
+                            className="p-1.5 rounded-md border border-[var(--ink-200)] hover:bg-[var(--ink-100)] text-[var(--ink-500)] transition-colors"
+                            title={isExp ? "Collapse" : "Expand"}
+                            aria-expanded={isExp}
                           >
-                            {isExp ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            {isExp ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                           </button>
                         </div>
                       </div>
 
-                      {/* Expandable Document Findings */}
+                      {/* Expandable entities panel */}
                       {isExp && (
-                        <div className="p-4 bg-[#F7F9FC] border-t border-[#E4E7EC] space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-xs font-bold text-[#172033] uppercase tracking-wider flex items-center gap-1.5">
-                              <ShieldCheck className="w-3.5 h-3.5 text-[#155EEF]" />
-                              <span>Extracted Clinical Entities</span>
+                        <div className="px-4 py-3 bg-[var(--bg-surface-2)] border-t border-[var(--ink-200)] space-y-2">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-[10px] font-semibold text-[var(--ink-500)] uppercase tracking-wider flex items-center gap-1.5">
+                              <ShieldCheck className="w-3.5 h-3.5 text-[var(--clinical)]" />
+                              Extracted Clinical Entities
                             </h4>
-                            <span className="text-[11px] text-[#667085]">
-                              {docEntities.length} fields extracted
+                            <span className="text-[10px] text-[var(--ink-500)]">
+                              {docEntities.length} field{docEntities.length === 1 ? "" : "s"}
                             </span>
                           </div>
 
                           {docEntities.length > 0 ? (
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                               {docEntities.map((ent) => (
                                 <div
                                   key={ent.id}
-                                  className="p-3 bg-white rounded-lg border border-[#E4E7EC] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                                  className="px-3 py-2 bg-[var(--bg-surface)] rounded-md border border-[var(--ink-200)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
                                 >
                                   <div>
                                     <div className="flex items-center gap-2">
-                                      <span className="font-bold text-[#172033]">{ent.field_name.replace(/_/g, " ")}</span>
-                                      <span className="text-[#667085] font-mono text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">
+                                      <span className="font-semibold text-[var(--ink-800)]">{ent.field_name.replace(/_/g, " ")}</span>
+                                      <span className="text-[var(--ink-400)] font-mono text-[9px] bg-[var(--ink-100)] px-1.5 py-0.5 rounded">
                                         {ent.source_location || "page 1"}
                                       </span>
                                     </div>
-                                    <p className="text-sm font-medium text-[#172033] mt-0.5">{ent.value}</p>
+                                    <p className="text-sm font-medium text-[var(--ink-900)] mt-0.5">{ent.value}</p>
                                   </div>
 
-                                  <div className="flex items-center gap-3 flex-shrink-0">
-                                    <span className="text-[11px] font-mono text-[#12B76A] font-semibold">
-                                      {Math.round(ent.confidence * 100)}% conf
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className="text-[10px] text-[var(--ink-500)]">
+                                      {Math.round(ent.confidence * 100)}% AI confidence
                                     </span>
-                                    <StatusBadge status={ent.verification_status} />
+                                    <StatusBadge status={ent.verification_status} showIcon={false} />
                                   </div>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-[#667085] italic py-2">
+                            <p className="text-xs text-[var(--ink-500)] italic py-2">
                               No clinical fields extracted from this document.
                             </p>
                           )}
@@ -527,27 +546,27 @@ export default function EncounterReviewPage() {
 
       {/* TAB 4: Timeline */}
       {activeTab === "timeline" && (
-        <Card className="shadow-xs">
-          <CardHeader className="border-b border-[#E4E7EC] px-5 py-4">
-            <CardTitle className="text-sm font-bold text-[#172033]">Longitudinal Clinical Timeline</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>Longitudinal Clinical Timeline</CardTitle>
           </CardHeader>
-          <CardContent className="p-5">
+          <CardContent>
             {timeLoading ? (
               <div className="py-8 flex justify-center"><Spinner /></div>
             ) : !timeline?.length ? (
-              <div className="py-8 text-center text-sm text-[#667085]">No longitudinal timeline events recorded.</div>
+              <div className="py-8 text-center text-sm text-[var(--ink-500)]">No longitudinal timeline events recorded.</div>
             ) : (
-              <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#E4E7EC]">
+              <div className="relative pl-6 space-y-5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[var(--ink-200)]">
                 {timeline.map((ev, idx) => (
                   <div key={ev.id ?? idx} className="relative">
-                    <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[#155EEF] ring-4 ring-blue-50" />
-                    <div className="bg-[#F7F9FC] border border-[#E4E7EC] rounded-lg p-3.5 space-y-0.5">
+                    <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-[var(--clinical)] ring-4 ring-[var(--clinical-light)]" />
+                    <div className="bg-[var(--bg-surface-2)] border border-[var(--ink-200)] rounded-md p-3 space-y-0.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#172033] capitalize">{ev.event_type}</span>
-                        <span className="text-xs text-[#667085] font-mono">{ev.date ?? "Date uncertain"}</span>
+                        <span className="text-xs font-semibold text-[var(--ink-900)] capitalize">{ev.event_type}</span>
+                        <span className="text-xs text-[var(--ink-500)] font-mono">{ev.date ?? "Date uncertain"}</span>
                       </div>
-                      <p className="text-xs text-[#667085]">
-                        Confidence: {Math.round(ev.date_confidence * 100)}% {ev.date_uncertain && "(flagged uncertain)"}
+                      <p className="text-xs text-[var(--ink-500)]">
+                        AI extraction confidence: {Math.round(ev.date_confidence * 100)}%{ev.date_uncertain && " · date flagged uncertain"}
                       </p>
                     </div>
                   </div>
